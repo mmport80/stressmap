@@ -1,0 +1,4 @@
+description,Volatility Rate,Underlying Price,Interest Rate,Dividend Yield,start_date,end_date,comment,Z Spread
+"US Debt Ceiling Deadlock",0.24,-0.15,-0.03,0.02,2011/7/15,2011/8/19,
+"Black Monday",1.14,-0.26,-0.02,0.01,1987/10/16,1987/10/19,"VIX data from http://www.cboe.com/micro/VIX/historical.aspx",
+"The Day After Black Monday",-0.66,0.09,0,-0.03,1987/10/20,1987/10/21,"VIX data from http://www.cboe.com/micro/VIX/historical.aspx"

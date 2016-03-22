@@ -1,0 +1,185 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	
+	<style>
+		rect{
+			stroke-width: 1;
+			fill: none;
+			}	
+	</style>
+	
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./lib2.js"></script>
+</head>
+<body>
+	<h1>VolKills.org Stress Test Example</h1>
+	
+	<script>
+	
+		var px = new PLs();
+		
+		//******************************************************************
+		//******************************************************************
+		
+		var dataBinding = d3.select("body")
+			.append("svg");
+		
+		var margin = {top: 20, right: 20, bottom: 30, left: 40};
+		
+		var width = 400 + margin.left + margin.right;
+		var height = 400 + margin.top + margin.bottom;
+		
+		var svgContainer = d3.select("svg")
+				.attr("width", width)
+				.attr("height", height);
+		
+		var volShocks = [-0.5,-0.4,-0.3,-0.2,-0.1,0,0.5,1.0,1.5,2,2.5];
+		var eqShocks = [-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5];
+		
+		var x = d3.scale.ordinal()	.domain(volShocks)
+						.rangeBands([0, width]);
+		
+		var y = d3.scale.linear()
+				.domain([Math.max.apply(null,eqShocks),Math.min.apply(null,eqShocks)])
+				.range([ margin.bottom,height ]);
+		
+		svgContainer	.selectAll(".eqShocks")
+				.data(eqShocks)
+				.enter()
+				.append("text")             
+				.attr("transform", "translate("+(0)+","+(margin.top)+")")
+				.text(function (d) { return d; })
+				.attr("dy", "-.4em")
+				.attr("x", 0)
+	                	.attr("y", function (d) { return y(d); });
+	        
+	        //label
+	        svgContainer	.append("g")          
+	        		.append("text")     
+				.text("Equity Shock")
+				.attr("x", 0)
+	                	.attr("y", margin.top);
+	                	
+	                	
+		svgContainer	.selectAll(".volShocks")
+				.data(volShocks)
+				.enter()
+				.append("text")             
+				.attr("transform", "translate("+(margin.left)+","+(margin.top)+")")
+				.text(function (d) { return d; })
+				.attr("x", function (d) { return x(d); })
+	                	.attr("y", height+margin.top);
+		
+		//label
+	        svgContainer	.append("g")          
+	        		.append("text")     
+				.text("Vol Shock")
+				.attr("x", width)
+	                	.attr("y", height+margin.top+margin.bottom+10);
+		
+		var squares = svgContainer	.selectAll("rect");
+		
+		function xo(test){
+			//instead of multiplying by 100 - find out how to escape decimals
+			svgContainer.select("#x"+(test[0].x*100)+"y"+(test[0].y*100)).remove();
+			
+			var data = squares	.data(test)
+						.enter()
+						.append("rect");
+				
+			data
+				//tweaked in order to align with axes	
+				.attr("transform", "translate("+(margin.left)+","+(0)+")")
+				.attr("x", function (d) { return x(d.x); })
+				.attr("y", function (d) { return y(d.y); })
+				.attr("id", function (d) {return "x"+(d.x*100)+"y"+(d.y*100); } )
+				.attr("width", 20)
+				.attr("height", 20)
+				.attr("rx", 1)
+              			.attr("ry", 1)
+              			//add to css
+				.style("stroke", function (d) { 
+								if (d.pl > 0) {
+									return "black";
+									}
+								else if (d.pl < 0) {
+									return "red";
+									}
+								else {
+									return "white";
+									}
+								}
+					)
+				.append("title")
+				.text(function(d) { return "Vol Shock " + d.x + ", Equity Shock " + d.y + "; PL " + d.pl });
+		      }
+		
+		var shocks = getShocks(volShocks,eqShocks);
+		
+		//read csv
+		//select rect which matches hist stress scenario
+		//fill selected rect with colour
+		//add legend with each stress scen desc
+		
+		//******************************************************************
+		//******************************************************************
+		
+		d3.csv("test_data/covered_call.csv", function(error, positions) {
+			positions.forEach(function(position){
+				var vd = new Date(position.vDate+" UTC");
+				var ed = new Date(position.eDate+" UTC");
+				
+				if (position.exposure == 'option') {
+					pos = new Option(+position.quantity,vd,+position.strike,ed,position.putOrCall,+position.stockPrice,+position.mktV,+position.divYield,+position.intRate);
+					pos.getAnalyticalResults(shocks);
+					}
+				else if (position.exposure == 'equity')  {
+					pos = new Equity(+position.quantity,+position.stockPrice,+position.mktV);
+					pos.getAnalyticalResults(shocks);
+					}
+				
+				
+				});
+			});
+			
+		/*
+		d3.csv("historical_stress_scenarios.csv", function(error, scenarios) {
+			scenarios.forEach(function(scenario){
+				
+				});
+			});
+		*/
+		//******************************************************************
+		//******************************************************************
+		
+	</script>
+	
+	<br />
+	<br />
+	<p>test</p>
+</body>	
+</html>

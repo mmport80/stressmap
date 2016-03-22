@@ -1,0 +1,6 @@
+description,Volatility Rate,Underlying Price,Interest Rate,Dividend Yield,Z Spread,start_date,end_date,comment
+9/11 Terrorist Attack,0.11,-0.12,0.02,-0.02,0.01,2001/09/10,2001/09/20,
+Credit Crunch,0.51,-0.35,-0.02,0.025,-0.01,2008/08/28,2008/10/10,
+US Debt Ceiling Deadlock,0.24,-0.15,-0.03,0.015,0.025,2011/7/15,2011/8/19,
+Black Monday,1.14,-0.26,-0.02,0.01,-0.02,1987/10/16,1987/10/19,VIX data from http://www.cboe.com/micro/VIX/historical.aspx
+The Day After Black Monday,-0.66,0.09,0,-0.03,0.01,1987/10/20,1987/10/21,VIX data from http://www.cboe.com/micro/VIX/historical.aspx

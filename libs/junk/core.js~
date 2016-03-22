@@ -1,0 +1,753 @@
+/*
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+//generate factor shocks using upper and lower limits 
+
+
+
+//*********************************************************************
+//shock cycle
+function shockLoop(pos) {
+	//using global variable
+	shocks.forEach( function(shock){
+		pos.value(shock);
+		});
+	}
+
+
+//******************************************************************
+//Data structures
+//Store PLs
+function PLs(){
+	this.pls = [];
+	
+	//generalise to find with n keys
+	this.addPL = function(pl,shock){
+		
+		//console.log("pl");
+		//console.log(pl);
+		//console.log(shock["Z Spread"]);
+		
+		//find whether object already exists
+		var matched = this.pls.filter(
+					function(exists){
+						//return true if object already exists
+						return (exists.shock == shock);
+					});
+		//all the other objects
+		var notMatched = this.pls.filter(
+					function(exists){
+						//return true if object is not in this array
+						return !(exists.shock == shock);
+					});
+		
+		
+		
+		//if nothing's found
+		if (matched.length == 0){
+			//push in new entry
+			var r = {shock:shock, pl:pl};
+			this.pls.push(r);
+			return r;
+			}
+		else {
+			//sum existing PL with new one
+			var sum = roundThree(pl + matched[0].pl);
+			var r = {shock:shock, pl:sum };
+			//push in new entry
+			notMatched.push(r);
+			//return updated set of PLs
+			this.pls = notMatched;
+			return r;
+			}
+		}
+	}
+	
+
+
+
+
+
+//******************************************************************
+//Instruments
+
+//extract similarities out
+//value method
+//q, mv, npv
+
+//******************************************************************
+//******************************************************************
+//add cash object -- another easy one
+//domestic cash
+function Cash(quantity,mktV){
+	//Holding related inputs
+	this.quantity   = quantity;
+	this.mktV	= mktV;
+
+	//Results
+	this.nPV = mktV;
+
+	var _this = this;
+
+	//need to make this a better name
+	this.value = function(shock, stressMap) {
+		//Domestic cash never reacts to shocks
+		//Need to update
+		//shockedNPV = 0;
+		
+		//cycle through array
+		stressMap.graphs.forEach(function(graph){
+			//add pl to pl store to graph
+			//kick off graph redraw cycle
+			//pl = (shockedNPV - _this.nPV) * _this.quantity;
+			
+			//**
+			//add pl to stressmap pl array, which will be used when axes change
+			graph.px.addPL( 0, shock );
+			graph.countPLsByCell();
+			});
+			
+		stressMap.px.addPL( 0, shock );
+			
+		stressMap.updatePercentageComplete();
+		}
+	}
+
+//******************************************************************
+//******************************************************************
+
+function Equity(quantity,stockPrice,mktV){
+	//Holding related inputs
+	this.quantity   = quantity;
+	this.stockPrice	= stockPrice;
+	this.mktV	= mktV;
+
+	//Results
+	this.nPV = mktV;
+	
+	
+	var _this = this;
+
+	//need to make this a better name
+	this.value = function(shock, stressMap) {
+		shockedNPV = _this.nPV*(1+shock["Underlying Price"]);
+		
+		//cycle through array
+		stressMap.graphs.forEach(function(graph){
+			//add pl to pl store to graph
+			//kick off graph redraw cycle
+			pl = (shockedNPV - _this.nPV) * _this.quantity;
+			//console.log(shockedNPV, _this.nPV, _this.quantity);
+			graph.px.addPL( pl, shock );
+			graph.countPLsByCell();
+			});
+		
+		stressMap.px.addPL( pl, shock );
+		
+		stressMap.updatePercentageComplete();
+		}
+	}
+
+function Swap(	quantity,
+		effective_date,
+		market_value,
+		maturity_date,
+		face,
+		rate_1m,
+		rate_3m,
+		rate_6m,
+		rate_1y,
+		rate_2y,
+		rate_3y,
+		rate_5y,
+		rate_7y,
+		rate_10y,
+		rate_20y,
+		rate_30y,
+		coupon,
+		fixed_frequency,
+		ref_rate_1m,
+		ref_rate_3m,
+		ref_rate_6m,
+		ref_rate_1y,
+		ref_rate_2y,
+		ref_rate_3y,
+		ref_rate_5y,
+		ref_rate_7y,
+		ref_rate_10y,
+		ref_rate_20y,
+		ref_rate_30y,
+		spread,
+		floating_frequency,
+		start_date
+		){
+
+	//Holding related inputs
+	this.quantity 			= quantity;
+
+	//VolKills.org Inputs
+	this.effective_date 		= effective_date;
+	this.market_value		= market_value;
+	this.maturity_date 		= maturity_date;
+	this.face 			= face;
+	this.rate_1m 			= rate_1m;
+	this.rate_3m 			= rate_3m;
+	this.rate_6m 			= rate_6m;
+	this.rate_1y 			= rate_1y;
+	this.rate_2y 			= rate_2y;
+	this.rate_3y 			= rate_3y;
+	this.rate_5y 			= rate_5y;
+	this.rate_7y 			= rate_7y;
+	this.rate_10y 			= rate_10y;
+	this.rate_20y 			= rate_20y;
+	this.rate_30y 			= rate_30y;
+	this.coupon			= coupon;
+	this.fixed_frequency		= fixed_frequency;
+	this.ref_rate_1m 		= ref_rate_1m;
+	this.ref_rate_3m 		= ref_rate_3m;
+	this.ref_rate_6m 		= ref_rate_6m;
+	this.ref_rate_1y 		= ref_rate_1y;
+	this.ref_rate_2y 		= ref_rate_2y;
+	this.ref_rate_3y 		= ref_rate_3y;
+	this.ref_rate_5y 		= ref_rate_5y;
+	this.ref_rate_7y 		= ref_rate_7y;
+	this.ref_rate_10y 		= ref_rate_10y;
+	this.ref_rate_20y 		= ref_rate_20y;
+	this.ref_rate_30y 		= ref_rate_30y;
+	this.spread 			= spread;
+	this.floating_frequency 	= floating_frequency;
+	this.start_date 		= start_date;
+
+	//Results
+	this.z_spread;
+	this.nPV;
+
+	this.promises = [];
+
+	var _this = this;
+
+	this.calibrate = function(a, shocks, stressMap){
+		
+		url = 'http://www.volkills.org/version/stable/swap/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/market_value/'+_this.market_value+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+_this.rate_1m+'/3m/'+_this.rate_3m+'/6m/'+_this.rate_6m+'/1y/'+_this.rate_1y+'/2y/'+_this.rate_2y+'/3y/'+_this.rate_3y+'/5y/'+_this.rate_5y+'/7y/'+_this.rate_7y+'/10y/'+_this.rate_10y+'/20y/'+_this.rate_20y+'/30y/'+_this.rate_30y+'/coupon/'+_this.coupon+'/fixed_frequency/'+_this.fixed_frequency+'/reference_index_term_structure/1m/'+_this.ref_rate_1m+'/3m/'+_this.ref_rate_3m+'/6m/'+_this.ref_rate_6m+'/1y/'+_this.ref_rate_1y+'/2y/'+_this.ref_rate_2y+'/3y/'+_this.ref_rate_3y+'/5y/'+_this.ref_rate_5y+'/7y/'+_this.ref_rate_7y+'/10y/'+_this.ref_rate_10y+'/20y/'+_this.ref_rate_20y+'/30y/'+_this.ref_rate_30y+'/spread/'+_this.spread+'/floating_frequency/'+_this.floating_frequency+'/start/year/'+_this.start_date.getUTCFullYear()+'/month/'+(_this.start_date.getUTCMonth()+1)+'/day/'+_this.start_date.getUTCDate();
+	
+		promise = getData(url);
+
+		_this.promises[0] = promise;
+
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  	_this.nPV = +( $(response)	.find('#NPV')
+							.contents()[0]
+							.textContent	);
+			_this.z_spread = +( $(response)	.find("[id='Calibrated Spread']")
+							.contents()[0]
+							.textContent	);
+	
+			a(_this, shocks, stressMap);
+			});
+		}
+
+	this.value = function(shock, stressMap){
+		shock_interest_rate = defaultShock(shock["Interest Rate"]);
+
+		url = 'http://www.volkills.org/version/stable/swap/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/z_spread/'+_this.z_spread+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+(Math.max(0.00001,_this.rate_1m+shock_interest_rate))+'/3m/'+(Math.max(0.00001,_this.rate_3m+shock_interest_rate))+'/6m/'+(Math.max(0.00001,_this.rate_6m+shock_interest_rate))+'/1y/'+(Math.max(0.00001,_this.rate_1y+shock_interest_rate))+'/2y/'+(Math.max(0.00001,_this.rate_2y+shock_interest_rate))+'/3y/'+(Math.max(0.00001,_this.rate_3y+shock_interest_rate))+'/5y/'+(Math.max(0.00001,_this.rate_5y+shock_interest_rate))+'/7y/'+(Math.max(0.00001,_this.rate_7y+shock_interest_rate))+'/10y/'+(Math.max(0.00001,_this.rate_10y+shock_interest_rate))+'/20y/'+(Math.max(0.00001,_this.rate_20y+shock_interest_rate))+'/30y/'+(Math.max(0.00001,_this.rate_30y+shock_interest_rate))+'/coupon/'+_this.coupon+'/fixed_frequency/'+_this.fixed_frequency+'/reference_index_term_structure/1m/'+_this.ref_rate_1m+'/3m/'+_this.ref_rate_3m+'/6m/'+_this.ref_rate_6m+'/1y/'+_this.ref_rate_1y+'/2y/'+_this.ref_rate_2y+'/3y/'+_this.ref_rate_3y+'/5y/'+_this.ref_rate_5y+'/7y/'+_this.ref_rate_7y+'/10y/'+_this.ref_rate_10y+'/20y/'+_this.ref_rate_20y+'/30y/'+_this.ref_rate_30y+'/spread/'+_this.spread+'/floating_frequency/'+_this.floating_frequency+'/start/year/'+_this.start_date.getUTCFullYear()+'/month/'+(_this.start_date.getUTCMonth()+1)+'/day/'+_this.start_date.getUTCDate();
+	
+		promise = getData(url);
+
+		_this.promises.push(promise);
+ 
+ 		promise.success(function (response) {
+			//add to array of shocked results
+			shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+	
+			//cycle through array
+			stressMap.graphs.forEach(function(graph){
+				//add pl to pl store to graph
+				//kick off graph redraw cycle
+				pl = (shockedNPV - _this.nPV) * _this.quantity;
+		
+				//console.log(pl, shock);
+		
+				graph.px.addPL( pl, shock );
+				graph.countPLsByCell();
+				});
+	
+			stressMap.px.addPL( pl, shock );
+	
+			stressMap.updatePercentageComplete();
+			});
+		}
+	}
+
+function FloatingRateNote(	quantity,
+				effective_date,
+				market_value,
+				maturity_date,
+				face,
+				rate_1m,
+				rate_3m,
+				rate_6m,
+				rate_1y,
+				rate_2y,
+				rate_3y,
+				rate_5y,
+				rate_7y,
+				rate_10y,
+				rate_20y,
+				rate_30y,
+				ref_rate_1m,
+				ref_rate_3m,
+				ref_rate_6m,
+				ref_rate_1y,
+				ref_rate_2y,
+				ref_rate_3y,
+				ref_rate_5y,
+				ref_rate_7y,
+				ref_rate_10y,
+				ref_rate_20y,
+				ref_rate_30y,
+				spread,
+				payment_frequency,
+				current_floating_rate
+				){
+	
+	//Holding related inputs
+	this.quantity 			= quantity;
+
+	//VolKills.org Inputs
+	this.effective_date 		= effective_date;
+	this.market_value		= market_value;
+	this.maturity_date 		= maturity_date;
+	this.face 			= face;
+	this.rate_1m 			= rate_1m;
+	this.rate_3m 			= rate_3m;
+	this.rate_6m 			= rate_6m;
+	this.rate_1y 			= rate_1y;
+	this.rate_2y 			= rate_2y;
+	this.rate_3y 			= rate_3y;
+	this.rate_5y 			= rate_5y;
+	this.rate_7y 			= rate_7y;
+	this.rate_10y 			= rate_10y;
+	this.rate_20y 			= rate_20y;
+	this.rate_30y 			= rate_30y;
+	this.ref_rate_1m 		= ref_rate_1m;
+	this.ref_rate_3m 		= ref_rate_3m;
+	this.ref_rate_6m 		= ref_rate_6m;
+	this.ref_rate_1y 		= ref_rate_1y;
+	this.ref_rate_2y 		= ref_rate_2y;
+	this.ref_rate_3y 		= ref_rate_3y;
+	this.ref_rate_5y 		= ref_rate_5y;
+	this.ref_rate_7y 		= ref_rate_7y;
+	this.ref_rate_10y 		= ref_rate_10y;
+	this.ref_rate_20y 		= ref_rate_20y;
+	this.ref_rate_30y 		= ref_rate_30y;
+	this.spread 			= spread;
+	this.payment_frequency 		= payment_frequency;
+	this.current_floating_rate 	= current_floating_rate;
+
+	//Results
+	this.z_spread;
+	this.nPV;
+
+	this.promises = [];
+
+	var _this = this;
+
+	this.calibrate = function(a, shocks, stressMap){
+		url = 'http://volkills.org/version/stable/frn/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/market_value/'+_this.market_value+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+_this.rate_1m+'/3m/'+_this.rate_3m+'/6m/'+_this.rate_6m+'/1y/'+_this.rate_1y+'/2y/'+_this.rate_2y+'/3y/'+_this.rate_3y+'/5y/'+_this.rate_5y+'/7y/'+_this.rate_7y+'/10y/'+_this.rate_10y+'/20y/'+_this.rate_20y+'/30y/'+_this.rate_30y+'/reference_index_term_structure/1m/'+_this.ref_rate_1m+'/3m/'+_this.ref_rate_3m+'/6m/'+_this.ref_rate_6m+'/1y/'+_this.ref_rate_1y+'/2y/'+_this.ref_rate_2y+'/3y/'+_this.ref_rate_3y+'/5y/'+_this.ref_rate_5y+'/7y/'+_this.ref_rate_7y+'/10y/'+_this.ref_rate_10y+'/20y/'+_this.ref_rate_20y+'/30y/'+_this.ref_rate_30y+'/spread/'+_this.spread+'/payment_frequency/'+_this.payment_frequency+'/current_floating_rate/'+_this.current_floating_rate;
+		
+		promise = getData(url);
+	
+		_this.promises[0] = promise;
+	
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  	_this.nPV = +( $(response)	.find('#NPV')
+							.contents()[0]
+							.textContent	);
+			_this.z_spread = +( $(response)	.find("[id='Z Spread']")
+							.contents()[0]
+							.textContent	);
+		
+			a(_this, shocks, stressMap);
+			});
+		}
+
+	this.value = function(shock, stressMap){
+		shock_interest_rate = defaultShock(shock["Interest Rate"]);
+		shock_spread = defaultShock(shock["Z Spread"]);
+		
+		//console.log(_this.z_spread, shock_spread);
+		//console.log(shock_interest_rate);
+		
+		//both rates and ref rates are shocked together
+		url = 'http://volkills.org/version/stable/frn/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/z_spread/'+(Math.max(0.00001,_this.z_spread+shock_spread))+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+(Math.max(0.00001,_this.rate_1m+shock_interest_rate))+'/3m/'+(Math.max(0.00001,_this.rate_3m+shock_interest_rate))+'/6m/'+(Math.max(0.00001,_this.rate_6m+shock_interest_rate))+'/1y/'+(Math.max(0.00001,_this.rate_1y+shock_interest_rate))+'/2y/'+(Math.max(0.00001,_this.rate_2y+shock_interest_rate))+'/3y/'+(Math.max(0.00001,_this.rate_3y+shock_interest_rate))+'/5y/'+(Math.max(0.00001,_this.rate_5y+shock_interest_rate))+'/7y/'+(Math.max(0.00001,_this.rate_7y+shock_interest_rate))+'/10y/'+(Math.max(0.00001,_this.rate_10y+shock_interest_rate))+'/20y/'+(Math.max(0.00001,_this.rate_20y+shock_interest_rate))+'/30y/'+(Math.max(0.00001,_this.rate_30y+shock_interest_rate))+'/reference_index_term_structure/1m/'+(Math.max(0.00001,_this.ref_rate_1m+shock_interest_rate))+'/3m/'+(Math.max(0.00001,_this.ref_rate_3m+shock_interest_rate))+'/6m/'+(Math.max(0.00001,_this.ref_rate_6m+shock_interest_rate))+'/1y/'+(Math.max(0.00001,_this.ref_rate_1y+shock_interest_rate))+'/2y/'+(Math.max(0.00001,_this.ref_rate_2y+shock_interest_rate))+'/3y/'+(Math.max(0.00001,_this.ref_rate_3y+shock_interest_rate))+'/5y/'+(Math.max(0.00001,_this.ref_rate_5y+shock_interest_rate))+'/7y/'+(Math.max(0.00001,_this.ref_rate_7y+shock_interest_rate))+'/10y/'+(Math.max(0.00001,_this.ref_rate_10y+shock_interest_rate))+'/20y/'+(Math.max(0.00001,_this.ref_rate_20y+shock_interest_rate))+'/30y/'+(Math.max(0.00001,_this.ref_rate_30y+shock_interest_rate))+'/spread/'+_this.spread+'/payment_frequency/'+_this.payment_frequency+'/current_floating_rate/'+_this.current_floating_rate;
+	
+		//console.log(url);	
+	
+		promise = getData(url);
+	
+		_this.promises.push(promise);
+	
+		promise.success(function (response) {
+			//add to array of shocked results
+			shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+		
+			//cycle through array
+			stressMap.graphs.forEach(function(graph){
+				//add pl to pl store to graph
+				//kick off graph redraw cycle
+				pl = (shockedNPV - _this.nPV) * _this.quantity;
+			
+				graph.px.addPL( pl, shock );
+				graph.countPLsByCell();
+				});
+		
+			stressMap.px.addPL( pl, shock );
+		
+			stressMap.updatePercentageComplete();
+			});
+		}
+	}
+
+
+function Bond(	quantity,
+		effective_date,
+		market_value,
+		maturity_date,
+		face,
+		rate_1m,
+		rate_3m,
+		rate_6m,
+		rate_1y,
+		rate_2y,
+		rate_3y,
+		rate_5y,
+		rate_7y,
+		rate_10y,
+		rate_20y,
+		rate_30y,
+		coupon,
+		payment_frequency
+		){
+	//Holding related inputs
+	this.quantity 		= quantity;
+	
+	//VolKills.org Inputs
+	this.effective_date 	= effective_date;
+	this.market_value	= market_value;
+	this.maturity_date 	= maturity_date;
+	this.face 		= face;
+	this.rate_1m 		= rate_1m;
+	this.rate_3m 		= rate_3m;
+	this.rate_6m 		= rate_6m;
+	this.rate_1y 		= rate_1y;
+	this.rate_2y 		= rate_2y;
+	this.rate_3y 		= rate_3y;
+	this.rate_5y 		= rate_5y;
+	this.rate_7y 		= rate_7y;
+	this.rate_10y 		= rate_10y;
+	this.rate_20y 		= rate_20y;
+	this.rate_30y 		= rate_30y;
+	this.coupon 		= coupon;
+	this.payment_frequency 	= payment_frequency
+
+	//Results
+	this.z_spread;
+	this.nPV;
+	
+	this.promises = [];
+	
+	var _this = this;
+	
+	this.calibrate = function(a, shocks, stressMap){
+		url = 'http://volkills.org/version/stable/bond/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/market_value/'+_this.market_value+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+_this.rate_1m+'/3m/'+_this.rate_3m+'/6m/'+_this.rate_6m+'/1y/'+_this.rate_1y+'/2y/'+_this.rate_2y+'/3y/'+_this.rate_3y+'/5y/'+_this.rate_5y+'/7y/'+_this.rate_7y+'/10y/'+_this.rate_10y+'/20y/'+_this.rate_20y+'/30y/'+_this.rate_30y+'/coupon/'+_this.coupon+'/payment_frequency/'+_this.payment_frequency;
+		promise = getData(url);
+		
+		_this.promises[0] = promise;
+		
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  	_this.nPV = +( $(response)	.find('#NPV')
+							.contents()[0]
+							.textContent	);
+			_this.z_spread = +( $(response)	.find("[id='Spread']")
+							.contents()[0]
+							.textContent	);
+			
+			a(_this, shocks, stressMap);
+			});
+		}
+	
+	this.value = function(shock, stressMap){
+		shock_spread = defaultShock(shock["Z Spread"]);
+		shock_interest_rate = defaultShock(shock["Interest Rate"]);
+		
+		url = 'http://volkills.org/version/stable/bond/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/z_spread/'+(Math.max(0.00001,_this.z_spread+shock_spread))+'/maturity/year/'+_this.maturity_date.getUTCFullYear()+'/month/'+(_this.maturity_date.getUTCMonth()+1)+'/day/'+_this.maturity_date.getUTCDate()+'/face/'+_this.face+'/term_structure/1m/'+(Math.max(0.00001,_this.rate_1m+shock_interest_rate))+'/3m/'+(Math.max(0.00001,_this.rate_3m+shock_interest_rate))+'/6m/'+(Math.max(0.00001,_this.rate_6m+shock_interest_rate))+'/1y/'+(Math.max(0.00001,_this.rate_1y+shock_interest_rate))+'/2y/'+(Math.max(0.00001,_this.rate_2y+shock_interest_rate))+'/3y/'+(Math.max(0.00001,_this.rate_3y+shock_interest_rate))+'/5y/'+(Math.max(0.00001,_this.rate_5y+shock_interest_rate))+'/7y/'+(Math.max(0.00001,_this.rate_7y+shock_interest_rate))+'/10y/'+(Math.max(0.00001,_this.rate_10y+shock_interest_rate))+'/20y/'+(Math.max(0.00001,_this.rate_20y+shock_interest_rate))+'/30y/'+(Math.max(0.00001,_this.rate_30y+shock_interest_rate))+'/coupon/'+_this.coupon+'/payment_frequency/'+_this.payment_frequency;
+		
+		promise = getData(url);
+		
+		_this.promises.push(promise);
+		
+		promise.success(function (response) {
+			//add to array of shocked results
+			shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+			
+			//cycle through array
+			stressMap.graphs.forEach(function(graph){
+				//add pl to pl store to graph
+				//kick off graph redraw cycle
+				pl = (shockedNPV - _this.nPV) * _this.quantity;
+				
+				graph.px.addPL( pl, shock );
+				graph.countPLsByCell();
+				});
+			
+			stressMap.px.addPL( pl, shock );
+			
+			stressMap.updatePercentageComplete();
+			});
+		}
+	}
+
+//******************************************************************
+//******************************************************************
+//Option object
+function Option(quantity,effective_date,strike_price,expiry_date,put_or_call,underlying_price,market_value,dividend_yield,rate_1y,style){
+	//Holding related inputs
+	this.quantity = quantity;
+
+	//VolKills.org Inputs
+	this.effective_date	= effective_date;
+	this.strike_price	= strike_price;
+	this.expiry_date	= expiry_date;
+	this.put_or_call	= put_or_call;
+	this.underlying_price	= underlying_price;
+	this.market_value	= market_value;
+	this.dividend_yield	= dividend_yield;
+	this.rate_1y		= rate_1y;
+	this.style		= style;
+
+	//Results
+	this.iV;
+	this.nPV;
+	
+	this.promises = [];
+	
+	var _this = this;
+	
+
+	//add promises to class array
+	//when kill signal comes,
+	//cycle through array and abort all related promises
+
+	//calibrate
+	//value
+	this.calibrate = function(a, shocks, stressMap){
+		url = 'http://volkills.org/version/stable/equity_option/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/market_value/'+_this.market_value+'/expiry/year/'+_this.expiry_date.getUTCFullYear()+'/month/'+(_this.expiry_date.getUTCMonth()+1)+'/day/'+_this.expiry_date.getDate()+'/strike_price/'+_this.strike_price+'/style/'+_this.style+'/put_or_call/'+_this.put_or_call+'/underlying_price/'+_this.underlying_price+'/dividend_yield/'+_this.dividend_yield+'/interest_rate/'+_this.rate_1y;
+		
+		promise = getData(url);
+		
+		_this.promises[0] = promise;
+		
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  		_this.nPV = +(	$(response)	.find('#NPV')
+								.contents()[0]
+								.textContent	);
+				_this.volatility_rate = +(	$(response)	.find("[id='Implied Volatility']")
+								.contents()[0]
+								.textContent	);
+				
+				a(_this, shocks, stressMap);
+				});
+		}
+	
+	
+	this.value = function(shock, stressMap){
+		//shocks - default is zero
+		//shock prob use log shocks rather than simple
+		
+		shock_volatility_rate = defaultShock(shock["Volatility Rate"]);
+		shock_interest_rate = defaultShock(shock["Interest Rate"]);
+		shock_underlying_price = defaultShock(shock["Underlying Price"]); 
+		shock_dividend_yield = defaultShock(shock["Dividend Yield"]);
+		
+		url = 'http://volkills.org/version/stable/equity_option/effective/year/'+_this.effective_date.getUTCFullYear()+'/month/'+(_this.effective_date.getUTCMonth()+1)+'/day/'+_this.effective_date.getUTCDate()+'/volatility_rate/'+Math.max(0.00001,_this.volatility_rate+shock_volatility_rate)+'/expiry/year/'+_this.expiry_date.getUTCFullYear()+'/month/'+(_this.expiry_date.getUTCMonth()+1)+'/day/'+(_this.expiry_date.getUTCDate())+'/strike_price/'+_this.strike_price+'/style/'+_this.style+'/put_or_call/'+_this.put_or_call+'/underlying_price/'+(_this.underlying_price*(1+shock_underlying_price))+'/dividend_yield/'+(Math.max(0.00001,_this.dividend_yield+shock_dividend_yield))+'/interest_rate/'+(Math.max(0.00001,_this.rate_1y+shock_interest_rate));
+		
+		promise = getData(url);
+		
+		_this.promises.push(promise);
+		
+		promise.success(function (response) {
+			//add to array of shocked results
+			shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+			
+			//cycle through array
+			stressMap.graphs.forEach(function(graph){
+				//add pl to pl store to graph
+				//kick off graph redraw cycle
+				pl = (shockedNPV - _this.nPV) * _this.quantity;
+				
+				graph.px.addPL( pl, shock );
+				graph.countPLsByCell();
+				});
+			
+			stressMap.px.addPL( pl, shock );
+			
+			stressMap.updatePercentageComplete();
+			
+			});
+		}
+
+	}
+	
+	//******************************************************************
+	//******************************************************************
+	//Option object
+function Cds(	quantity,
+		effective_date,
+		market_value,
+		maturity_date,
+		face,
+		rate_1m,
+		rate_3m,
+		rate_6m,
+		rate_1y,
+		rate_2y,
+		rate_3y,
+		rate_5y,
+		rate_7y,
+		rate_10y,
+		rate_20y,
+		rate_30y,
+		spread){
+			
+	//Holding related inputs
+	this.quantity = quantity;
+
+	//VolKills.org Inputs
+	this.effective_date	= effective_date;
+	this.market_value	= market_value;
+	this.maturity_date	= maturity_date;
+	this.face		= face;
+	this.rate_1m 		= rate_1m;
+	this.rate_3m 		= rate_3m;
+	this.rate_6m 		= rate_6m;
+	this.rate_1y 		= rate_1y;
+	this.rate_2y 		= rate_2y;
+	this.rate_3y 		= rate_3y;
+	this.rate_5y 		= rate_5y;
+	this.rate_7y 		= rate_7y;
+	this.rate_10y 		= rate_10y;
+	this.rate_20y 		= rate_20y;
+	this.rate_30y 		= rate_30y;
+	this.spread		= spread;
+
+	//Results
+	this.default_probability;
+	this.nPV;
+
+	this.promises = [];
+
+	var _this = this;
+
+
+	//add promises to class array
+	//when kill signal comes,
+	//cycle through array and abort all related promises
+
+	//calibrate
+	//value
+	this.calibrate = function(a, shocks, stressMap){
+		url ="http://volkills.org/version/stable/cds/effective/year/"+_this.effective_date.getUTCFullYear()+"/month/"+(_this.effective_date.getUTCMonth()+1)+"/day/"+_this.effective_date.getUTCDate()+"/market_value/"+_this.market_value+"/maturity/year/"+_this.maturity_date.getUTCFullYear()+"/month/"+(_this.maturity_date.getUTCMonth()+1)+"/day/"+_this.maturity_date.getDate()+"/face/"+_this.face+'/term_structure/1m/'+_this.rate_1m+'/3m/'+_this.rate_3m+'/6m/'+_this.rate_6m+'/1y/'+_this.rate_1y+'/2y/'+_this.rate_2y+'/3y/'+_this.rate_3y+'/5y/'+_this.rate_5y+'/7y/'+_this.rate_7y+'/10y/'+_this.rate_10y+'/20y/'+_this.rate_20y+'/30y/'+_this.rate_30y+"/spread/"+_this.spread;
+		promise = getData(url);
+
+		_this.promises[0] = promise;
+
+		//console.log(url);
+
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  		_this.nPV = +(	$(response)	.find('#NPV')
+								.contents()[0]
+								.textContent	);
+				_this.default_probability = +(	$(response)	.find("[id='Implied Hazard Rate']")
+								.contents()[0]
+								.textContent	);
+		
+				a(_this, shocks, stressMap);
+				});
+		}
+
+
+	this.value = function(shock, stressMap){
+		//shocks - default is zero
+		//shock prob use log shocks rather than simple
+
+		shock_z_spread = defaultShock(shock["Z Spread"]);
+		shock_interest_rate = defaultShock(shock["Interest Rate"]);
+
+
+		z_spread =  (1 / (1 - _this.default_probability * (1 - 0.4))) - 1;
+		//console.log(z_spread, _this.default_probability);
+		shocked_z_spread = Math.max(0.000001, z_spread + shock_z_spread);
+		//console.log(shocked_z_spread);
+		shocked_default_probability = (1 - (1/(1+shocked_z_spread))) / (1 - 0.4);
+
+
+		url ="http://volkills.org/version/stable/cds/effective/year/"+_this.effective_date.getUTCFullYear()+"/month/"+(_this.effective_date.getUTCMonth()+1)+"/day/"+_this.effective_date.getUTCDate()+"/default_probability/"+shocked_default_probability+"/maturity/year/"+_this.maturity_date.getUTCFullYear()+"/month/"+(_this.maturity_date.getUTCMonth()+1)+"/day/"+_this.maturity_date.getDate()+"/face/"+_this.face+'/term_structure/1m/'+(Math.max(0.00001,_this.rate_1m+shock_interest_rate))+'/3m/'+(Math.max(0.00001,_this.rate_3m+shock_interest_rate))+'/6m/'+(Math.max(0.00001,_this.rate_6m+shock_interest_rate))+'/1y/'+(Math.max(0.00001,_this.rate_1y+shock_interest_rate))+'/2y/'+(Math.max(0.00001,_this.rate_2y+shock_interest_rate))+'/3y/'+(Math.max(0.00001,_this.rate_3y+shock_interest_rate))+'/5y/'+(Math.max(0.00001,_this.rate_5y+shock_interest_rate))+'/7y/'+(Math.max(0.00001,_this.rate_7y+shock_interest_rate))+'/10y/'+(Math.max(0.00001,_this.rate_10y+shock_interest_rate))+'/20y/'+(Math.max(0.00001,_this.rate_20y+shock_interest_rate))+'/30y/'+(Math.max(0.00001,_this.rate_30y+shock_interest_rate))+"/spread/"+_this.spread;
+		
+		promise = getData(url);
+
+		_this.promises.push(promise);
+
+		promise.success(function (response) {
+			//add to array of shocked results
+			shockedNPV = +$(response).find('#NPV').contents()[0].textContent;
+	
+			//cycle through array
+			stressMap.graphs.forEach(function(graph){
+				//add pl to pl store to graph
+				//kick off graph redraw cycle
+				pl = (shockedNPV - _this.nPV) * _this.quantity;
+		
+				//console.log("xoxox");
+				//console.log(pl, _this.nPV, shockedNPV);
+				//console.log(shock["Z Spread"]);
+		
+				graph.px.addPL( pl, shock );
+				graph.countPLsByCell();
+				});
+	
+			stressMap.px.addPL( pl, shock );
+	
+			stressMap.updatePercentageComplete();
+	
+			});
+		}
+
+	}
+	
+function defaultShock(shock){
+	if (shock == null) {
+		return 0;
+		}
+	else {
+		return shock
+		}
+	}

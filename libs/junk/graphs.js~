@@ -1,0 +1,476 @@
+//convert limits plus number of factors to array
+function convertAxisToShocks(axis, numberOfFactors){
+	
+	upper = axis.upper;
+	lower = axis.lower;
+	
+	requestLimit = 256;
+
+	//8 is a sane(ish) max?
+	divisor = Math.min(
+			Math.floor(
+				//refer to parent stress map object and get number of shocks
+				Math.pow(requestLimit,1/numberOfFactors) - 1
+				)
+			, 7);
+
+	difference = upper - lower;
+
+	step = difference / divisor;
+
+	shocks2 = _.range(lower,upper+0.000000000001,step);
+
+	return shocks2;
+	}
+
+
+function GenericGraph(numberOfFactors, threshold, totalMarketValue, positionCountTotal, historicalStressScenarios, xAxisInput, yAxisInput) {
+	
+	//link the names of the axes here to the PLs coming from the instrument repricings
+	this.margin = {top: 40, right: 40, bottom: 40, left: 40};
+	this.width = 400 + this.margin.left + this.margin.right;
+	
+	this.xShocksArray = convertAxisToShocks(xAxisInput, numberOfFactors);
+	
+	this.xAxisText = xAxisInput.riskFactor;
+	
+	
+	
+	this.xAxis = d3	.scale	
+			.linear(x)
+			.domain(
+				[ Math.min.apply(null,_this.xShocksArray), Math.max.apply(null,_this.xShocksArray) ]
+				)
+			.range([ 0, _this.width ]);
+	
+	this.squaresPV;
+	
+	this.circles;
+	
+	this.squareWidth;
+	
+	this.threshold = threshold;
+	this.numberOfFactors = numberOfFactors;
+	this.totalMarketValue = totalMarketValue;
+	this.positionCountTotal = positionCountTotal;
+	
+	this.px = new PLs()
+	
+	var _this = this;
+
+	this.removeAllPls = function(){
+		
+		underscoredX = _this.xAxisText.replace(" ","_");
+		if (_this.yAxisText == null) {
+			underscoredY = "";
+			}
+		else{
+			underscoredY = _this.yAxisText.replace(" ","_");
+			}
+		d3.select("#Squares"+underscoredX+"_"+underscoredY).selectAll("rect").remove();
+		}
+		
+	this.removeAllCircles = function(){
+		d3	.select("#Circles"+_this.xAxisText+"_"+_this.yAxisText)
+	    		.selectAll("circle")
+			.remove();
+		}
+		
+	this.removeGraph = function(){
+		d3.select("#"+_this.xAxisText+"_"+_this.yAxisText).remove();
+		}
+		
+	this.origAppendPL = function(pL){
+		plCalcCount = plCalcCount + 1;		
+		updatePercentageComplete();
+		this.appendPL(pL);
+		}
+		
+		
+		
+	
+		
+		
+		
+	this.getXAxis = function(){
+		return d3	.scale	
+				.linear()
+				.domain(
+					[ Math.min.apply(null,_this.xShocksArray), Math.max.apply(null,_this.xShocksArray) ]
+					)
+				.range([ 0, _this.width ]);
+		}
+	
+	this.getYAxis = function(){
+		return d3	.scale
+				.linear()
+				.domain(
+					[Math.max.apply(null,_this.yShocksArray),Math.min.apply(null,_this.yShocksArray)]
+					)
+				.range([ _this.margin.bottom, _this.marginlessHeight ]);
+		}
+		
+	this.setUpYAxis = function(svgContainer){
+		//y axis
+		//labels for each vol shock
+		yAxisSVG = svgContainer	.append("g");
+		
+		yAxisSVG.attr("transform", "translate(0,"+(_this.margin.top)+")")
+			.selectAll(".yAxis")
+			.data(_this.yShocksArray)
+			.enter()
+			.append("text")             
+			.attr("dy", "-0.1em")
+			.text( function(d){ return _this.formatYLabel(d) } )
+			.attr("x", 0)
+	        	.attr("y", function (d) { return _this.yAxis(d); });
+		
+		//label for equity shock axis
+		yAxisSVG	.append("text")     
+				.text(_this.yAxisText)
+				.attr("x", 0)
+		        	.attr("y", 0 );
+		        	
+				
+		return svgContainer;
+		}
+		
+	this.setUpXAxis = function(svgContainer,labelYCoodinates){
+		//labels for each x axis shock
+		xAxisSVG = svgContainer	.append("g");
+		
+		xAxisSVG.attr("dy", "0em")
+			.attr("transform", "translate("+(_this.margin.left)+",0)")
+			.selectAll(".xAxis")
+			.data(_this.xShocksArray)
+			.enter()
+			.append("text")    
+			.text( function(d){ return _this.formatXLabel(d) } )
+			.attr("x", function (d) { return _this.xAxis(d); })
+	        	.attr("y", labelYCoodinates);
+	
+		//label for x shock axis
+		xAxisSVG	.append("text")     
+				.text(_this.xAxisText)
+				.style("text-anchor","start")
+				.attr("x", _this.width)
+		        	.attr("y", labelYCoodinates+20);
+		  
+		return svgContainer;
+		}
+	
+	this.formatXLabel = function(d){
+		if (d == _this.xAxis.domain()[1] ){
+			return roundTwo(d * 100) + "%";
+			}
+		else {
+			return roundTwo(d * 100);
+			}
+		}
+	
+	this.formatYLabel = function(d){
+		if (d == _this.yAxis.domain()[0] ){
+			return roundTwo(d * 100) + "%";
+			}
+		else {
+			return roundTwo(d * 100);
+			}
+		}
+		
+	this.generalSetup = function(){
+	
+		//replace space with _
+		underscoredX = _this.xAxisText.replace(" ","_");
+		
+		if (_this.yAxisText == null) {
+			underscoredY = "";
+			}
+		else{
+			underscoredY = _this.yAxisText.replace(" ","_");
+			}
+		//general setup
+		svgContainer = d3	.select("#graphs")
+					.append("svg")
+					.attr("width", _this.width)
+					.attr("height", _this.height)
+					.attr("id",underscoredX+"_"+underscoredY);
+	
+		svgContainer	.append("g")
+				.attr("id","Squares"+underscoredX+"_"+underscoredY);
+	
+		_this.squaresPV = d3.select("#Squares"+underscoredX+"_"+underscoredY).selectAll("rect");
+	
+		_this.circles = svgContainer	.append("g")
+						.attr("id","Circles"+underscoredX+"_"+underscoredY)
+						.attr("transform","translate(10,10)")
+      						.selectAll("circle");
+	     
+		//if no stress scenarios then
+		//read file
+		//otherwise use curent stress scenarios
+		
+		if (historicalStressScenarios.length == 0) {
+			d3.csv(stressFilePath, function(error, scenarios) {
+				historicalStressScenarios = scenarios;
+				_this.appendStressCircles(scenarios);
+				});
+			}
+		else {
+			_this.appendStressCircles(historicalStressScenarios);
+			}
+		        	
+		return svgContainer;
+		}
+	
+	//for 2d
+	this.opacitySteps = 1/_this.numberOfFactors/_this.numberOfFactors/_this.positionCountTotal;
+	
+	
+	//40, 50  = 8
+	//57, 67  = 6
+	//90, 100 = 4
+	
+	//add red pnl squares
+	this.appendSquares = function(pls){
+		//console.log(40 * 8/_this.xShocksArray.length);
+		
+		squareWidth = 40 * 8/_this.xShocksArray.length;
+		
+		//this is the problem
+		_this.squaresPV
+			//array of objects, [ ..., {xshock, yshock, count}, ... ]
+			.data(pls)
+			.enter()
+			.append("rect")
+			//tweaked in order to align with axes	
+			.attr("transform", "translate("+(_this.margin.left)+","+(0)+")")
+			//Sync with shocks used in graph
+			.attr("x", function (d) { return _this.xAxis(d.xShock); })
+			.attr("y", _this.dimensionSpecificYAxis)
+			.attr("width", squareWidth)
+			.attr("height", squareWidth)
+			.attr("rx", 1)
+      			.attr("ry", 1)
+      			.attr("style",
+      				function (d) { 
+      					//scale based on resolution
+      					//max possible is 16 for 4 risk factors
+      					fill = ";fill-opacity: " + (d.count * _this.opacitySteps);
+      					if (d.count > 0) {
+      						return "fill: red;stroke: red; stroke-opacity: "+1+fill;
+      						} ; 
+      					}
+      				)
+			.append("title")
+			//Sync with shocks used in graph
+			.text( _this.dimensionSpecificToolTip );
+		}
+	
+	this.appendStressCircles = function(scenarios){
+      		//read historical stress scenarios from the csv
+		var data2 = _this.circles	.data(scenarios)
+						.enter()
+						.append("circle");
+
+		data2	//tweaked in order to align with axes	
+			.attr("transform", "translate("+(_this.margin.left)+","+(0)+")")
+			.attr("cx", function (d) { return _this.xAxis(+d[_this.xAxisText]);	})
+			.attr("cy", _this.dimensionSpecificStressYAxis)
+			.attr("r", 10)
+			.append("title")
+			.text(function(d) { return d.description+" ("+d.start_date+"-"+d.end_date + ")"});
+		}
+	}
+
+//******************************************************************
+//******************************************************************
+//create graph
+//need 1d graph - default y to 0 or something...  try to avoid the nan
+function GraphTwoD(numberOfFactors, threshold, totalMarketValue, positionCountTotal, historicalStressScenarios, xAxisInput, yAxisInput){
+
+	GenericGraph.call(this, numberOfFactors, threshold, totalMarketValue, positionCountTotal, historicalStressScenarios, xAxisInput, yAxisInput);
+
+	this.marginlessHeight = 400;
+	this.height = this.marginlessHeight + this.margin.top + this.margin.bottom;
+	
+	//link the names of the axes here to the PLs coming from the instrument repricings
+	var _this = this;
+	
+	//generate dynamically
+	this.yShocksArray = convertAxisToShocks(yAxisInput, numberOfFactors);
+	
+	this.yAxisText = yAxisInput.riskFactor;
+	
+	this.yAxis;
+	
+	this.dimensionSpecificToolTip = function(d) {
+		return "Frequency shock breaches threshold: " + d.count;
+		};
+		
+	this.dimensionSpecificYAxis = function(d) {
+		return _this.yAxis(d.yShock); 
+		};
+		
+	this.dimensionSpecificStressYAxis = function(d) {
+		return _this.yAxis(+d[_this.yAxisText]);
+		};
+	
+	//loop through every cell
+	//filter out pls for each cell
+	//count number of pls below threshold
+	//update colour of cell
+	this.countPLsByCell = function(){
+		//reduce this
+		//array of objects [..., {pl, shock:{u:09, v: 98, i= 87, d = 17}}, ...]
+		//to
+		//array of objects, [ ..., {xshock, yshock, count}, ... ]
+		shocksWithCounts = [];
+		
+		shocksWithCounts = _this.xShocksArray.reduce(function(p, xShock){
+			return p.concat(
+				_this.yShocksArray.map(function(yShock){
+					count = {};
+					count = {count: _this.px.pls.filter(function(pl){
+						return 	(pl.shock[_this.xAxisText] == xShock) && 
+							(pl.shock[_this.yAxisText] == yShock) &&
+							(pl.pl < _this.threshold * Math.abs(_this.totalMarketValue)) //gotta fix this - should be threshold * totalmarket value
+						}).length,
+						xShock: xShock,
+						yShock: yShock};	
+					//collect into array
+					return count;
+					})
+				);
+			}, []);
+		//get array collection above and call append squares
+		_this.removeAllPls();
+		
+		//console.log(shocksWithCounts);
+		
+		_this.appendSquares(shocksWithCounts);
+		}
+	
+	this.drawOrigin = function(svgContainer){
+		
+		zeroX =	_this.xAxis((( 	_.min(_this.xShocksArray.filter(function (x) {return x >= 0;}))
+					+
+					_.max(_this.xShocksArray.filter(function (x) {return x <= 0;}))
+					
+				)) / 2);
+		
+		zeroY =	_this.yAxis((( 	_.min(_this.yShocksArray.filter(function (y) {return y >= 0;}))
+					+
+					_.max(_this.yShocksArray.filter(function (y) {return y <= 0;}))
+					
+				) ) / 2);
+			
+		//console.log(_this.xAxis(zeroX), _this.yAxis(zeroY));
+		      	
+		svgContainer = svgContainer	.append("g")
+		      				.attr("transform","translate(40,40)")	;
+		      	
+		//y axis line
+		svgContainer.append("line")
+			.attr("x1",zeroX)
+			.attr("y1",zeroY+20)
+			.attr("x2",zeroX)
+			.attr("y2",zeroY-20)
+			.style("stroke","black")
+			.style("stroke-width","0.5");
+		
+		//x axis line
+		svgContainer.append("line")
+			.attr("x1",zeroX+20)
+			.attr("y1",zeroY)
+			.attr("x2",zeroX-20)
+			.attr("y2",zeroY)
+			.style("stroke","black")
+			.style("stroke-width","0.5");
+		}
+	
+	//All the basics and probably (too much) more
+	this.setUpGraph = function(){	
+		_this.xAxis = _this.getXAxis();
+		_this.yAxis = _this.getYAxis();
+	
+		svgContainer = _this.generalSetup();
+	     
+	     	svgContainer = _this.setUpYAxis(svgContainer);
+	     
+	     	labelYCoodinates = _this.height+_this.margin.top+_this.margin.bottom;
+	     
+    		svgContainer = _this.setUpXAxis(svgContainer, labelYCoodinates);
+    		
+    		_this.drawOrigin(svgContainer);
+    		
+		}
+	}
+	
+
+//******************************************************************
+//******************************************************************
+
+function GraphOneD(numberOfFactors, threshold, totalMarketValue, positionCountTotal, historicalStressScenarios, xAxisInput){
+	
+	GenericGraph.call(this, numberOfFactors, threshold, totalMarketValue, positionCountTotal, historicalStressScenarios, xAxisInput);
+	
+	//generate dynamically
+	
+	this.dimensionSpecificYAxis = 10;
+	
+	this.dimensionSpecificToolTip = function(d) { 
+		return "Frequency shock breached threshold: " + d.count;
+		}
+		
+	this.dimensionSpecificStressYAxis = function(d) {
+		return 20;
+		};
+	
+	this.marginlessHeight = 0;
+	this.height = this.marginlessHeight + this.margin.top + this.margin.bottom;
+		
+	//link the names of the axes here to the PLs coming from the instrument repricings
+	var _this = this;
+
+	this.countPLsByCell = function(){
+		//reduce this
+		//array of objects [..., {pl, shock:{u:09, v: 98, i= 87, d = 17}}, ...]
+		//to
+		//array of objects, [ ..., {xshock, yshock, count}, ... ]
+		shocksWithCounts = [];
+		shocksWithCounts = _this.xShocksArray.map(function(xShock){
+					count = {};
+					count = {
+						count: _this.px.pls.filter(function(pl){
+				
+						return 	(pl.shock[_this.xAxisText] == xShock) && 
+							(pl.pl < _this.threshold * Math.abs(_this.totalMarketValue))
+						}).length,
+						xShock: xShock
+						};	
+				//collect into array
+					return count;
+					});
+		//get array collection above and call append squares
+		
+		_this.removeAllPls();
+		
+		_this.appendSquares(shocksWithCounts);
+		}
+
+
+	//All the basics and probably (too much) more
+	this.setUpGraph = function(){	
+		//split x and y axis setup; 1d setup will only call x axis
+		//split out everything not related to axis work
+		
+		_this.xAxis = _this.getXAxis();
+
+		svgContainer = _this.generalSetup();
+
+		labelYCoodinates = _this.height+_this.margin.top+_this.margin.bottom;
+	     
+    		svgContainer = _this.setUpXAxis(svgContainer, labelYCoodinates);
+		}
+	
+	}

@@ -1,0 +1,2 @@
+exposure,quantity,effective_date,strike_price,expiry_date,put_or_call,underlying_price,market_value,dividend_yield,rate_1y
+equity,1,2014/08/14,,,,1995.18,1995.18,0,0

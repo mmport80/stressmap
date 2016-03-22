@@ -1,0 +1,34 @@
+var longButterflyOptions = [	{exposure:'option',quantity:1,vDate: vDate,strike:75,eDate:eDate,putOrCall:'call',stockPrice:200,mktV:122,divYield:0.01,intRate:0.001},
+						{exposure:'option',quantity:-2,vDate: vDate,strike:100,eDate:eDate,putOrCall:'call',stockPrice:200,mktV:100,divYield:0.01,intRate:0.001},
+						{exposure:'option',quantity:1,vDate: vDate,strike:125,eDate:eDate,putOrCall: 'call',stockPrice:200,mktV:80,divYield:0.01,intRate:0.001},
+						]
+	
+var longStraddle = [	{exposure:'option',quantity: 1,vDate:vDate,strike: 200,eDate: eDate,putOrCall: 'call',stockPrice:210,mktV:100,divYield:0.01,intRate:0.001},
+			{exposure:'option',quantity: 1,vDate:vDate,strike: 200,eDate: eDate,putOrCall: 'put',stockPrice:210,mktV:100,divYield:0.01,intRate:0.001},
+			]
+
+var coveredCall = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+			{exposure:'equity',quantity:1,stockPrice:2.1,mktV:1.0},
+			]
+
+var equity = [	{exposure:'equity',quantity:1,stockPrice:2.1,mktV:1.0},
+		]
+
+var longCall = [	{exposure:'option',quantity:1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+		]
+	
+var longPut = [	{exposure:'option',quantity:1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+		]
+
+var shortCall = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+		]
+	
+var shortPut = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+		]
+
+var shortVol = [{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:4.1,mktV:1.0,divYield:0.01,intRate:0.001},
+		{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:1.1,mktV:1.0,divYield:0.01,intRate:0.001}
+		]
+var longVol = [{exposure:'option',quantity:1.1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:0.9,divYield:0.01,intRate:0.001},
+		{exposure:'option',quantity:0.8,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.3,divYield:0.01,intRate:0.001}
+		]

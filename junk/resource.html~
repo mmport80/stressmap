@@ -1,0 +1,89 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>Stress Map - Portfolio stress testing</title>
+	
+	<link rel="stylesheet" type="text/css" href="./style.css">
+	<link href='http://fonts.googleapis.com/css?family=Ubuntu:700&text=stress+map' rel='stylesheet' type='text/css'>
+	<link rel="icon" type="image/png" href="favicon.ico" />
+	
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-497441-5', 'auto');
+		ga('send', 'pageview');
+
+	</script>
+</head>
+<body>
+	<div id="mainColumn">
+		<div id="leftColumn">
+			<div class = "inputGui">
+				<span id="title" class="black" >
+					stress
+				</span>
+				<span id="title" class="red" >
+					map
+				</span>
+			</div>
+			
+			<div class="inputGui">
+				(c) <a href="mailto:john.orford@gmail.com">John Orford</a> 2014
+			</div>
+		</div>
+		
+		<div id="graphs">
+			<div id="links">
+				<span class="link">
+					<a class="header" href="introduction2.html">Understand</a>
+				</span>
+				<span class="link">	
+					<a class="header" href="index.html">Analyse</a>
+				</span>
+				<span class="link">
+					Resource
+				</span>
+				<span class="link" style="float: right;">
+					Portfolio stress testing
+				</span>
+			</div>
+			<div>
+				<br /><br />
+				<p>
+					Test historical scenarios are downloadable <a href="test_historical_scenarios.zip">here</a>.
+				</p>
+				<p>
+					<a href="test_portfolios.zip">Download</a> example portfolio files and use them to build your own portfolios. 
+				</p>
+				<p>~</p>
+				<p>
+					Let me know what you think of this app - <a href="mailto:john.orford@gmail.com">John.Orford@Gmail.com</a>
+				</p>
+			</div>
+			
+		</div>
+		
+	</div>
+	
+</body>	
+</html>

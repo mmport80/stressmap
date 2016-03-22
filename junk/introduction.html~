@@ -1,0 +1,166 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>Stress Map - Reverse Engineering Financial Collapse</title>
+	
+	<link rel="stylesheet" type="text/css" href="./style.css">
+	
+	
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-497441-5', 'auto');
+		ga('send', 'pageview');
+
+	</script>
+</head>
+<body>
+	<div id="mainColumn">
+		<div id="leftColumn">
+			<div class = "inputGui">
+				<span id="title" class="stress" >
+					Stress
+				</span>
+				<span id="title" class="map" >
+					Map
+				</span>
+			</div>
+			
+			<div class="inputGui">
+				(c) <a href="mailto:john.orford@gmail.com">John Orford</a> 2014
+			</div>
+		</div>
+		
+		<div id="graphs">
+			<div id="links">
+				Stress Testing Intro | <a class="header" href=""> App </a> | <a class="header" href="">Resources</a>
+			</div>
+			<div>
+			<p class="first">
+				<!--Black swans?  Danger-->
+			
+				The goal of stress testing a portfolio is to ensure it is robust enough to survive future extreme events
+			</p>
+			<h1>
+				<!--Blackboard with equations-->
+			
+				Model securities
+			</h1>
+			<p>	
+				E.g. model bonds by discounting cash flows; equity options with the Black-Scholes-Merton equation and so on
+			</p>
+			<h1>
+				<!--Checklist of inputs-->
+			
+				List Inputs
+			</h1>
+			<p>
+				<!-- 3 or n axes-->
+				Each model input is a seperate dimension of our problem
+			</p>
+			<h1>
+				<!-- one line with question marks either end-->
+			
+				Identify Limits
+			</h1>
+			<p>	
+				Historical extreme movements of market inputs are a good starting point; which should be covered at a minimum
+			</p>
+			<p>
+				The limits should be less than truely apocolyptic however. E.g. if the S&P 500 index drops by more than 90% food will be more of a worry than your portfolio
+			</p>
+			<h1>
+				The bottom line
+			</h1>
+			<p>
+				<!-- -->
+				What's the bottom line?  How big a loss will threaten the portfolio's survival?  Either through regulatory or contractual capital requirements
+			</p>
+			<p>
+				<!-- -->
+				Putting it all together.  Where's the danger?  Which scenarios cause threshold breaching losses?
+			</p>
+			<p>
+				<!-- -->
+				Simplifying the analysis.  Identify dimensions where catastrophic scenarios are evenly distributed and of peripheral importance; remove them
+			</p>
+			<p>
+				<!-- -->
+				Apply hedge positions to the portfolio and ensure long term survival
+			</p>
+			</div>
+		</div>
+		
+	</div>
+	
+	<script>
+	defaultStressScenarioFile 	= "test_data/historical_stress_scenarios.csv";
+	defaultPortfolioFile		= "test_data/long_call.csv";
+	threshold 			= -0.20;
+	
+	var s = new StressMap(defaultStressScenarioFile, defaultPortfolioFile, threshold);
+	
+	s.init();
+	
+	//Changes UI, no need to grab more data
+	//change threshold, remove current rectangles, run through PLs again
+	d3.select("#threshold").on("input", function() {
+		s.setThreshold(+this.value);
+		});
+		
+	d3.select("#portfolioFileInput").on("change", function(){
+		if (window.File && window.FileReader && window.FileList && window.Blob) {
+			var uploadFile = this.files[0];
+			var reader = new window.FileReader();
+		
+			reader.onload = function(){
+				d3.select("#sortable2").selectAll("div.riskFactor").remove();
+				d3.selectAll("svg").remove();
+				d3	.select("#percentageComplete")
+					//pls calc'ed so far  / total number of pls to be calced * number of positions
+					.text(0);
+				s.init();
+				};
+			reader.readAsText(uploadFile);
+			}
+		else {
+			alert("Your browser won't let you save this graph -- try upgrading your browser to IE 10+ or Chrome or Firefox.");
+			}
+		});
+		
+	d3.select("#portfolioFileInput").on("change", function(){
+		s.setPortfolio(this.files[0]);
+		});
+		
+	d3.select("#historicalStressFileInput").on("change", function(){
+		s.setHistoricalStress(this.files[0]);
+		});
+	
+    	$( "#sortable2" ).sortable({
+		update: function(event, ui) {
+			s.setFactorOrder();
+		}
+	});
+	</script>
+</body>	
+</html>

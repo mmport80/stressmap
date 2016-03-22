@@ -1,0 +1,179 @@
+//******************************************************************
+//Grabs data from VolKills.org
+function getData(url){
+	return $.ajax({ url: url, cache: true, async: true});
+	}
+
+
+function roundTwo(x){
+	return Math.round(x*100)/100;
+	}
+
+//******************************************************************
+//Portfolio object
+function Portfolio(){
+	this.positions = [];
+
+
+	this.update = function(position){
+		this.addPosition(position);
+		}
+
+	this.addPosition = function(position){
+		this.positions = [position].concat(this.positions);
+		}
+	}
+
+function PLs(){
+	this.pls = [];
+	
+	this.addPL = function(pl,xi,yi){
+		//find whether object already exists
+		var matched = this.pls.filter(
+					function(exists){
+						//return true if object already exists
+						return (exists.x == xi) && (exists.y == yi);
+					});
+		//all the other objects
+		var notMatched = this.pls.filter(
+					function(exists2){
+						//return true if object is not in this array
+						return !(exists2.x == xi && exists2.y == yi);
+					});
+		
+		//if something's found
+		if (matched.length == 0){
+			//push in new entry
+			this.pls.push({y:yi, x:xi, pl:pl});
+			return {y:yi,x:xi,pl:roundTwo(pl)};
+			}
+		else{
+			//sum existing PL with new one
+			var sum = pl + matched[0].pl;
+			//push in new entry
+			notMatched.push({y:yi, x:xi, pl:sum });
+			//return updated set of PLs
+			this.pls = notMatched;
+			
+			
+			return {y:yi, x:xi, pl:roundTwo(sum) };
+			}
+		}
+	}
+
+function getShocks(volShocks,eqShocks){
+	a = volShocks;
+	
+	d = eqShocks;
+	
+	e = [];
+
+	d.forEach(function(f) {		
+		b = [];
+		a.forEach(function(c) {
+			b.push([c,f]);
+			});
+		e.push(b);
+		});
+
+	return e;
+	}
+
+//******************************************************************
+//******************************************************************
+
+//add cash object -- another easy one
+function Equity(quantity,stockPrice,mktV){
+	//Holding related inputs
+	this.quantity   = quantity;
+	this.stockPrice	= stockPrice;
+	this.mktV	= mktV;
+
+	//Results
+	this.nPV = mktV;
+
+	var _this = this;
+
+	//need to make this a better name
+	this.getAnalyticalResults = function(shocks){
+		
+		shocks.forEach(function(shockVector){
+			shockVector.forEach(function(shock){
+				console.log(
+					_this.quantity,_this.nPV,shock[1],shock[0],shock[1]
+					);
+				xo(
+					[px.addPL(_this.quantity*_this.nPV*shock[1],shock[0],shock[1])]
+					);
+				});
+			});
+		}
+		
+	}
+
+//******************************************************************
+//******************************************************************
+//Option object
+function Option(quantity,vDate,strike,eDate,putOrCall,stockPrice,mktV,divYield,intRate){
+	//Holding related inputs
+	this.quantity = quantity;
+
+	//VolKills.org Inputs
+	this.vDate	= vDate;
+	this.strike	= strike;
+	this.eDate	= eDate;
+	this.putOrCall	= putOrCall;
+	this.stockPrice	= stockPrice;
+	this.mktV	= mktV;
+	this.divYield	= divYield;
+	this.intRate	= intRate;
+
+	//Results
+	this.iV;
+	this.nPV;
+
+	this.getAnalyticalResults = function(shocks){
+		
+		//switch to _this style
+		var f = this;
+		
+		var url = 'http://volkills.org/version/stable/equity_option/effective/year/'+f.vDate.getUTCFullYear()+'/month/'+(f.vDate.getUTCMonth()+1)+'/day/'+f.vDate.getUTCDate()+'/market_value/'+f.mktV+'/expiry/year/'+f.eDate.getUTCFullYear()+'/month/'+(f.eDate.getUTCMonth()+1)+'/day/'+f.eDate.getDate()+'/strike_price/'+f.strike+'/style/european/put_or_call/'+f.putOrCall+'/underlying_price/'+f.stockPrice+'/dividend_yield/'+f.divYield+'/interest_rate/'+f.intRate;
+		
+		var promise = getData(url);
+		
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  		f.nPV = $(response).find('#NPV').contents()[0].textContent;
+				f.iV = $(response).find("[id='Implied Volatility']").contents()[0].textContent;
+				
+				shocks.forEach(function(shockVector){
+					shockVector.forEach(function(shock){
+						f.getNumericalResult(f.nPV,shock[0],shock[1]);
+						});
+					});
+				});
+		}
+	
+	
+	this.getNumericalResult = function(npv,x,y){
+		var f = this;
+		
+		//shocks - default is zero
+		//shock prob use log shocks rather than simple
+		var url = 'http://volkills.org/version/stable/equity_option/effective/year/'+f.vDate.getUTCFullYear()+'/month/'+(f.vDate.getUTCMonth()+1)+'/day/'+f.vDate.getUTCDate()+'/volatility_rate/'+f.iV*(1+x)+'/expiry/year/'+f.eDate.getUTCFullYear()+'/month/'+(f.eDate.getUTCMonth()+1)+'/day/'+(f.eDate.getUTCDate())+'/strike_price/'+f.strike+'/style/european/put_or_call/'+f.putOrCall+'/underlying_price/'+f.stockPrice*(1+y)+'/dividend_yield/'+f.divYield+'/interest_rate/'+f.intRate;
+		
+		var promise = getData(url);
+		promise.success(
+			function (response) {
+				//add to array of shocked results
+				shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+				
+				//append only specific PL to SVG table
+				//find result after adding current to any previous
+				xo(	[px.addPL(f.quantity*(shockedNPV - npv),x,y)]
+					);
+				}
+			);
+		}
+
+	}

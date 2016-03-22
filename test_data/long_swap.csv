@@ -1,0 +1,2 @@
+exposure,quantity,effective_date,market_value,maturity_date,face,rate_1m,rate_3m,rate_6m,rate_1y,rate_2y,rate_3y,rate_5y,rate_7y,rate_10y,rate_20y,rate_30y,coupon,fixed_frequency,ref_rate_1m,ref_rate_3m,ref_rate_6m,ref_rate_1y,ref_rate_2y,ref_rate_3y,ref_rate_5y,ref_rate_7y,ref_rate_10y,ref_rate_20y,ref_rate_30y,spread,floating_frequency,start_date
+swap,1,2014/08/14,10,2016/12/16,100,0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.0011,0.01,annual,0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.0011,0.001,annual,2013/12/31

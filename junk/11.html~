@@ -1,0 +1,268 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+	<link rel='shortcut icon' type='image/x-icon' href='/pix/favicon.ico' />
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	
+	<style>
+		rect{
+			stroke-width: 1;
+			fill: white;
+			}	
+		circle{
+			fill: white;
+			stroke: blue;
+			}
+	</style>
+	
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./lib2.js"></script>
+</head>
+<body>
+	<h1><a href="http://www.volkills.org">VolKills.org</a> Stress Test Example</h1>
+	
+	
+	<p>X and Y axes represent risk factor shocks which could occur in the future.</p>
+	<p>Shocks which are large enough to cause an institution to break margin limits or default on debt are shown in red.</p>
+	<p>Blue circles show historical scenarios which caused widespread losses.</p>
+	<p>Major assumption: securities converge to having correlations of +1 or -1 during such extreme events, and therefore risk factors can be shocked as one group</p>
+	
+	<script>
+	
+		var px = new PLs();
+		
+		//******************************************************************
+		//******************************************************************
+		
+		var dataBinding = d3.select("body")
+			.append("svg");
+		
+		var margin = {top: 20, right: 20, bottom: 30, left: 40};
+		
+		var width = 400 + margin.left + margin.right;
+		var height = 400 + margin.top + margin.bottom;
+		
+		var svgContainer = d3.select("svg")
+				.attr("width", width)
+				.attr("height", height);
+		
+		var volShocks = [-1,-0.5,0,0,0.5,1,1.5,2,2.5,3,3.5,4];
+		var eqShocks = [-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5];
+		
+		//vol shock scale
+		var x = d3.scale.linear()
+				.domain(
+					[ Math.min.apply(null,volShocks), Math.max.apply(null,volShocks) ]
+					)
+				.range([ 0, width ]);
+		
+		//equity shock scale
+		var y = d3.scale.linear()
+				.domain([Math.max.apply(null,eqShocks),Math.min.apply(null,eqShocks)])
+				.range([ margin.bottom,height ]);
+		
+		//labels for each equity shock
+		svgContainer	.append("g")
+				.selectAll(".eqShocks")
+				.data(eqShocks)
+				.enter()
+				.append("text")             
+				.attr("transform", "translate("+(0)+","+(margin.top)+")")
+				.text(function (d) { return d; })
+				.attr("dy", "-.4em")
+				.attr("x", 0)
+	                	.attr("y", function (d) { return y(d); });
+	        
+	        //label for equity shock axis
+	        svgContainer	.append("text")     
+				.text("Equity Shock")
+				.attr("x", 0)
+	                	.attr("y", margin.top);
+	                	
+		//labels for each vol shock
+		svgContainer	.append("g")          
+				.selectAll(".volShocks")
+				.data(volShocks)
+				.enter()
+				.append("text")             
+				.attr("transform", "translate("+(margin.left)+","+(margin.top)+")")
+				.text(function (d) { return d; })
+				.attr("x", function (d) { return x(d); })
+	                	.attr("y", height+margin.top);
+		
+		//label for vol shock axis
+	        svgContainer	.append("text")     
+				.text("Vol Shock")
+				.attr("x", width)
+	                	.attr("y", height+margin.top+margin.bottom+10);
+		
+		var squares = svgContainer	.append("g")
+						.selectAll("rect");
+		
+		function xo(test){
+			//instead of multiplying by 100 - find out how to escape decimals
+			svgContainer.select("#x"+(test[0].x*100)+"y"+(test[0].y*100)).remove();
+			
+			var data = squares	.data(test)
+						.enter()
+						.append("rect");
+				
+			data
+				//tweaked in order to align with axes	
+				.attr("transform", "translate("+(margin.left)+","+(0)+")")
+				.attr("x", function (d) { return x(d.x); })
+				.attr("y", function (d) { return y(d.y); })
+				.attr("id", function (d) {return "x"+(d.x*100)+"y"+(d.y*100); } )
+				.attr("width", 20)
+				.attr("height", 20)
+				.attr("rx", 1)
+              			.attr("ry", 1)
+              			//add to css
+				.style("stroke", function (d) { 
+								if (d.pl > -1) {
+									return "black";
+									}
+								else if (d.pl < -1) {
+									return "red";
+									}
+								else {
+									return "white";
+									}
+								}
+					)
+				.append("title")
+				.text(function(d) { return "Vol Shock " + d.x + ", Equity Shock " + d.y + "; PL " + d.pl });
+		      }
+		
+		var shocks = getShocks(volShocks,eqShocks);
+		
+		//******************************************************************
+		//******************************************************************
+		
+		//read position data from csv
+		d3.csv("test_data/butterfly_spread.csv", function(error, positions) {
+			positions.forEach(function(position){
+				var vd = new Date(position.vDate+" UTC");
+				var ed = new Date(position.eDate+" UTC");
+				
+				if (position.exposure == 'option') {
+					pos = new Option(+position.quantity,vd,+position.strike,ed,position.putOrCall,+position.stockPrice,+position.mktV,+position.divYield,+position.intRate);
+					pos.getAnalyticalResults(shocks);
+					}
+				else if (position.exposure == 'equity')  {
+					pos = new Equity(+position.quantity,+position.stockPrice,+position.mktV);
+					pos.getAnalyticalResults(shocks);
+					}
+				
+				
+				});
+			});
+			
+		
+		//******************************************************************
+		//******************************************************************
+		
+		//equity shock linear scale
+		//sync this scale up with the ordinal x scale...  perhaps switch our the ordinal scale.
+		//sync y scale -em tweak with the shock data
+		
+		var circles = svgContainer	.append("g")
+						.selectAll("circle");
+		
+		//read historical stress scenarios from the csv
+		//
+		d3.csv("test_data/historical_stress_scenarios.csv", 
+			function(d) {
+				return { volShock:d.volShock, eqShock:d.eqShock, description:d.description, start_date:d.start_date, end_date:d.end_date };
+				},
+			function(error,data3){
+				var data2 = circles	.data(data3)
+							.enter()
+							.append("circle");
+		
+				data2
+					//tweaked in order to align with axes	
+					.attr("transform", "translate("+(margin.left)+","+(0)+")")
+					.attr("cx", function (d) { return x(+d.volShock);	})
+					.attr("cy", function (d) { return y(+d.eqShock);	})
+					.attr("r", 10)
+					.append("title")
+					.text(function(d) { return d.description+" ("+d.start_date+"-"+d.end_date + ")"});
+				}
+			);
+		
+		
+		
+		//******************************************************************
+		//******************************************************************
+		
+		//black square
+		
+		svgContainer	.append("g")           
+				.attr("transform", "translate("+(30)+","+(height + margin.top + 60)+")")
+				.append("rect")
+				.attr("width", 20)
+				.attr("height", 20)
+				.attr("rx", 1)
+              			.attr("ry", 1)
+              			.style("stroke","red");
+              			
+              	svgContainer	.append("text")     
+              			.text("Institutional collapse magnitude loss")
+				.attr("x", margin.left+20)
+	                	.attr("y", height+margin.top+margin.bottom+45);
+		
+		//red square
+		
+		svgContainer	.append("g")           
+				.attr("transform", "translate("+(30)+","+(height + margin.top + 90)+")")
+				.append("rect")
+				.attr("width", 20)
+				.attr("height", 20)
+				.attr("rx", 1)
+              			.attr("ry", 1)
+              			.style("stroke","black");
+              			
+              	svgContainer	.append("text")     
+              			.text("Safety")
+				.attr("x", margin.left+20)
+	                	.attr("y", height+margin.top+margin.bottom+73);
+		
+		//blue circle
+		
+		svgContainer	.append("g")           
+				.attr("transform", "translate("+(30)+","+(height + margin.top + 120)+")")
+				.append("circle")
+				.attr("cx", 10)
+				.attr("cy", 10)
+				.attr("r", 10);
+              			
+              	svgContainer	.append("text")     
+              			.text("Historical stress event")
+				.attr("x", margin.left+20)
+	                	.attr("y", height+margin.top+margin.bottom+103);
+	</script>
+</body>	
+</html>

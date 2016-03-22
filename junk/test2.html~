@@ -1,0 +1,129 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+
+<!--
+	1] (P x V) * (C x I)
+	2] Deposit PL in PxV matrix for each (CxI)
+	
+	
+	
+	
+	v*p*c*i*positions
+
+
+
+	have a v*p store
+
+	and a c*i store
+
+
+	cycle through csv then
+
+		cycle thru v*p*c*i*position
+
+			drop result into each store
+
+
+
+				update graph
+
+
+
+	spawn new promise for each result
+
+
+
+
+
+	original: position * shocks
+	
+	
+-->
+
+
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+</head>
+<body>
+	<script>
+		//******************************************************************
+		//******************************************************************
+		
+		var volShocks = [{volatility_rate:-0.75},{volatility_rate:-0.5},{volatility_rate:0.5},{volatility_rate:0.75}];
+		var eqShocks = [{underlying_price:-0.2},{underlying_price:-0.1},{underlying_price:0.1},{underlying_price:0.2}];
+		var iShocks = [{interest_rate:-0.02},{interest_rate:-0.01},{interest_rate:0.01},{interest_rate:0.02}];
+		var divShocks = [{dividend_yield:-0.02},{dividend_yield:-0.01},{dividend_yield:0.01},{dividend_yield:0.02}];
+
+		
+		console.log(dualVectors(iShocks,dualVectors(volShocks,divShocks)));
+
+		
+		
+		//fixed x
+		function singleX(x,y) {
+			
+			//get conmunal variables up front
+			var yLength = y.length;
+			var yp = y.pop();
+			var xKey = Object.keys(x)[0];
+			
+			//result to return
+			var r = [];
+			
+			//grabs all keys - if y has multiple keys
+			Object.keys(yp).forEach( function(key) {
+				r[key] = yp[key];
+				});
+			
+			//add x's info
+			r[xKey] = x[xKey];
+			
+			//simple return condition
+			if (yLength == 1) {
+				return [r];
+				}
+			else {
+				//return current x and grab another y
+				return [r].concat(singleX(x,y.slice(0)));
+				}
+			}
+		
+		//2 full vectors to start with
+		function dualVectors(x,y) {
+			//grab communal data up front
+			var xLength = x.length;
+			var xx = singleX(x.pop(),y.slice(0));
+			
+			//Simple return condition
+			if (xLength == 1) {
+				return xx;
+				} 
+			else {
+				//return current x and grab next
+				return xx.concat(dualVectors(x.slice(0),y.slice(0)));
+				}
+			}
+		
+		
+	</script>
+</body>	
+</html>

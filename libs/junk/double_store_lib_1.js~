@@ -1,0 +1,242 @@
+/*
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+//******************************************************************
+//Grabs data from VolKills.org
+function getData(url){
+	return $.ajax({ url: url, cache: true, async: true});
+	}
+
+
+//******************************************************************
+//Round a number to two decimal places
+
+function roundTwo(x){
+	return Math.round(x*100)/100;
+	}
+
+
+//******************************************************************
+//replace all
+function replaceAll(find, replace, str) {
+	return str.replace(new RegExp(find, 'g'), replace);
+	}
+
+
+//******************************************************************
+//Store PLs
+function PLs(){
+	this.pls = [];
+	
+	//generalise to find with n keys
+	this.addPL = function(pl,shock){
+		//find whether object already exists
+		var matched = this.pls.filter(
+					function(exists){
+						//return true if object already exists
+						return (exists.shock == shock);
+					});
+		//all the other objects
+		var notMatched = this.pls.filter(
+					function(exists){
+						//return true if object is not in this array
+						return !(exists.shock == shock);
+					});
+		
+		//if nothing's found
+		if (matched.length == 0){
+			//push in new entry
+			var r = {shock:shock, pl:roundTwo(pl)};
+			this.pls.push(r);
+			return r;
+			}
+		else {
+			//sum existing PL with new one
+			var sum = roundTwo(pl + matched[0].pl);
+			var r = {shock:shock, pl:sum };
+			//push in new entry
+			notMatched.push(r);
+			//return updated set of PLs
+			this.pls = notMatched;
+			return r;
+			}
+		}
+	}
+
+
+
+function Factors(){
+	this.factors = [];
+	_this = this;
+	
+	this.addFactor = function(factorsX){
+		factorsX.forEach( function(factor){
+			if (_this.factors.indexOf(factor) == -1){
+				_this.factors.push(factor);
+				}
+			}); 
+		}
+	}
+
+
+
+//******************************************************************
+//******************************************************************
+//convert key:values to array
+function convertKeyValuesToArray(keyValues) {
+	kvLength = keyValues.length;
+	var r = keyValues.pop();
+	var value = r[Object.keys(r)[0]];
+	if (kvLength == 1) {
+		return [value];
+		}
+	else {
+		return [value].concat(convertKeyValuesToArray(keyValues));
+		}
+	}
+
+
+//******************************************************************
+//Instruments
+
+//******************************************************************
+//******************************************************************
+//add cash object -- another easy one
+//domestic cash
+function Cash(quantity,mktV){
+	//Holding related inputs
+	this.quantity   = quantity;
+	this.mktV	= mktV;
+
+	//Results
+	this.nPV = mktV;
+
+	var _this = this;
+
+	//need to make this a better name
+	this.value = function(shock) {
+		//Cash never reacts to shocks
+		
+		firstGraph.appendPL(
+			px.addPL(0,shock)
+			);
+			
+		secondGraph.appendPL(
+			px.addPL(0,shock)
+			);
+		}
+	}
+
+
+
+//******************************************************************
+//******************************************************************
+//add cash object -- another easy one
+function Equity(quantity,stockPrice,mktV){
+	//Holding related inputs
+	this.quantity   = quantity;
+	this.stockPrice	= stockPrice;
+	this.mktV	= mktV;
+
+	//Results
+	this.nPV = mktV;
+
+	var _this = this;
+
+	//need to make this a better name
+	this.value = function(shock) {
+		var shockedNPV = _this.nPV*(1+shock.underlying_price);
+			
+		gx.forEach(function(graph){
+			graph.appendPL(
+				px.addPL(_this.quantity*(shockedNPV - _this.nPV),shock)
+				);
+			});
+		}
+	}
+
+//******************************************************************
+//******************************************************************
+//Option object
+function Option(quantity,vDate,strike,eDate,putOrCall,stockPrice,mktV,divYield,intRate){
+	//Holding related inputs
+	this.quantity = quantity;
+
+	//VolKills.org Inputs
+	this.vDate	= vDate;
+	this.strike	= strike;
+	this.eDate	= eDate;
+	this.putOrCall	= putOrCall;
+	this.stockPrice	= stockPrice;
+	this.mktV	= mktV;
+	this.divYield	= divYield;
+	this.intRate	= intRate;
+
+	//Results
+	this.iV;
+	this.nPV;
+
+	var _this = this;
+
+	//calibrate
+	//value
+	this.calibrate = function(a){
+		var url = 'http://volkills.org/version/stable/equity_option/effective/year/'+_this.vDate.getUTCFullYear()+'/month/'+(_this.vDate.getUTCMonth()+1)+'/day/'+_this.vDate.getUTCDate()+'/market_value/'+_this.mktV+'/expiry/year/'+_this.eDate.getUTCFullYear()+'/month/'+(_this.eDate.getUTCMonth()+1)+'/day/'+_this.eDate.getDate()+'/strike_price/'+_this.strike+'/style/european/put_or_call/'+_this.putOrCall+'/underlying_price/'+_this.stockPrice+'/dividend_yield/'+_this.divYield+'/interest_rate/'+_this.intRate;
+		
+		var promise = getData(url);
+		//pass anon functions in here?
+		promise.success(function (response) {
+		  		_this.nPV = +(	$(response)	.find('#NPV')
+								.contents()[0]
+								.textContent	);
+				_this.iV = +(	$(response)	.find("[id='Implied Volatility']")
+								.contents()[0]
+								.textContent	);
+				a(_this);
+				});
+		}
+	
+	
+	this.value = function(shock){
+		//shocks - default is zero
+		//shock prob use log shocks rather than simple
+		var url = 'http://volkills.org/version/stable/equity_option/effective/year/'+_this.vDate.getUTCFullYear()+'/month/'+(_this.vDate.getUTCMonth()+1)+'/day/'+_this.vDate.getUTCDate()+'/volatility_rate/'+(_this.iV*(1+shock.volatility_rate))+'/expiry/year/'+_this.eDate.getUTCFullYear()+'/month/'+(_this.eDate.getUTCMonth()+1)+'/day/'+(_this.eDate.getUTCDate())+'/strike_price/'+_this.strike+'/style/european/put_or_call/'+_this.putOrCall+'/underlying_price/'+(_this.stockPrice*(1+shock.underlying_price))+'/dividend_yield/'+(Math.max(0.00001,_this.divYield+shock.dividend_yield))+'/interest_rate/'+(Math.max(0.00001,_this.intRate+shock.interest_rate));
+		
+		var promise = getData(url);
+		promise.success(
+			function (response) {
+				//add to array of shocked results
+				shockedNPV = $(response).find('#NPV').contents()[0].textContent;
+				
+				
+				//cycle through array
+				gx.forEach(function(graph){
+					//console.log(graph);
+					graph.appendPL(
+						px.addPL(_this.quantity*(shockedNPV - _this.nPV),shock)
+						);
+					});
+				
+				}
+			);
+		}
+
+	}
+
+

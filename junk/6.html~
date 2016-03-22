@@ -1,0 +1,210 @@
+
+
+
+<html>
+	<!--
+	    Stress Map Javascript example
+	    Copyright (C) 2014 John Orford
+
+	    This program is free software: you can redistribute it and/or modify
+	    it under the terms of the GNU Affero General Public License as
+	    published by the Free Software Foundation, either version 3 of the
+	    License, or (at your option) any later version.
+
+	    This program is distributed in the hope that it will be useful,
+	    but WITHOUT ANY WARRANTY; without even the implied warranty of
+	    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	    GNU Affero General Public License for more details.
+
+	    You should have received a copy of the GNU Affero General Public License
+	    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	-->
+
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./lib.js"></script>
+	
+	
+
+</head>
+<body>
+	<h1>VolKills.org Stress Test Example</h1>
+	
+	<script>
+		
+		
+		
+		//******************************************************************
+		//******************************************************************
+		var vDate = new Date(2014,1,31);
+		var eDate = new Date(2016,15,31);
+	
+		var p = new Portfolio();
+		
+		var px = new PLs();
+		
+		//******************************************************************
+		//******************************************************************
+		
+		var dataBinding = d3.select("body")
+			.append("svg")
+			.selectAll("square")
+			.data(px)
+			.enter();
+		
+		var margin = {top: 20, right: 20, bottom: 30, left: 40};
+		var width = 400 + margin.left + margin.right;
+		var height = 400 + margin.top + margin.bottom;
+		
+		
+		var svgContainer = d3.select("svg")
+			            .attr("width", width)
+				    .attr("height", height)
+				    .attr("transform", "translate(100,100)")
+		/*	    
+		var x = d3.scale.linear()
+				.domain([-0.6,0.6])
+				.range([margin.left, width]);
+		*/
+		
+		var x = d3.scale.ordinal()
+    			.domain([-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5])
+    			.rangeBands([0, width,0.1]);
+
+		var y = d3.scale.linear()
+				.domain([0.5,-0.5])
+				.range([ margin.bottom,height ]);
+		
+		var xAxis = d3.svg.axis()	.scale(x)
+						.orient("bottom");
+							
+		var yAxis = d3.svg.axis()	.scale(y)
+						.orient("right");	
+		
+		function xo(){
+			svgContainer.selectAll("*").remove();
+			
+			var test = px.pls;
+
+			var xAxisGroup = svgContainer	.append("g")
+			                              	.call(xAxis)
+							.attr("class", "x axis")
+							//adjusted for half the length of squares
+							.attr("transform", "translate("+(margin.left-10)+","+(margin.top+height+10)+")")
+							.append("text")
+							.attr("class", "label")
+							.style("text-anchor", "end")
+							.text("Vol Shock %");
+			
+			
+			var yAxisGroup = svgContainer	.append("g")
+							.attr("class", "y axis")
+							.call(yAxis)
+							.append("text")
+							.attr("class", "label")
+							.attr("transform", "rotate(-90)")
+							//adjusted for half the length of squares
+							.attr("transform", "translate(-10,-10)")
+						      	.style("text-anchor", "end")
+							.text("Eq Shock %");
+
+			var squares = svgContainer.selectAll("rect")
+				.data(test)
+				.enter()
+				.append("rect");
+				
+			squares
+				//tweaked in order to align with axes	
+				.attr("transform", "translate("+(margin.left)+","+(margin.top-30)+")")
+				.attr("x", function (d) { return x(d.x); })
+				.attr("y", function (d) { return y(d.y); })
+				.attr("width", 20)
+				.attr("height", 20)
+				.attr("rx", 1)
+              			.attr("ry", 1)
+				.style("stroke-width",1)
+				.style("fill","white")
+				.style("stroke", function (d) { 
+								if (d.pl > -0.5) {
+									return "black";
+									}
+								else if (d.pl < -0.5) {
+									return "red";
+									}
+								else {
+									return "white";
+									}
+								}
+					);
+		      }
+		//******************************************************************
+		//******************************************************************
+		
+		//Portfolio examples
+		
+		var longButterflyOptions = [	{exposure:'option',quantity:1,vDate: vDate,strike:75,eDate:eDate,putOrCall:'call',stockPrice:200,mktV:122,divYield:0.01,intRate:0.001},
+						{exposure:'option',quantity:-2,vDate: vDate,strike:100,eDate:eDate,putOrCall:'call',stockPrice:200,mktV:100,divYield:0.01,intRate:0.001},
+						{exposure:'option',quantity:1,vDate: vDate,strike:125,eDate:eDate,putOrCall: 'call',stockPrice:200,mktV:80,divYield:0.01,intRate:0.001},
+						]
+	
+		var longStraddle = [	{exposure:'option',quantity: 1,vDate:vDate,strike: 200,eDate: eDate,putOrCall: 'call',stockPrice:210,mktV:100,divYield:0.01,intRate:0.001},
+					{exposure:'option',quantity: 1,vDate:vDate,strike: 200,eDate: eDate,putOrCall: 'put',stockPrice:210,mktV:100,divYield:0.01,intRate:0.001},
+					]
+	
+		var coveredCall = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+					{exposure:'equity',quantity:1,stockPrice:2.1,mktV:1.0},
+					]
+	
+		var equity = [	{exposure:'equity',quantity:1,stockPrice:2.1,mktV:1.0},
+				]
+	
+		var longCall = [	{exposure:'option',quantity:1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+				]
+			
+		var longPut = [	{exposure:'option',quantity:1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+				]
+	
+		var shortCall = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+				]
+			
+		var shortPut = [	{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:1.0,divYield:0.01,intRate:0.001},
+				]
+	
+		var shortVol = [{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:4.1,mktV:1.0,divYield:0.01,intRate:0.001},
+				{exposure:'option',quantity:-1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:1.1,mktV:1.0,divYield:0.01,intRate:0.001}
+				]
+		var longVol = [{exposure:'option',quantity:1.1,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'put',stockPrice:2.1,mktV:0.9,divYield:0.01,intRate:0.001},
+				{exposure:'option',quantity:0.8,vDate: vDate,strike:2.1,eDate: eDate,putOrCall:'call',stockPrice:2.1,mktV:1.3,divYield:0.01,intRate:0.001}
+				]
+		
+		var shocks = getShocks();
+		
+		longPut.forEach(function(position){
+			if (position.exposure == 'option') {
+				var pos = new Option(position.quantity,position.vDate,position.strike,position.eDate,position.putOrCall,position.stockPrice,position.mktV,position.divYield,position.intRate);
+				}
+			else {
+				var pos = new Equity(position.quantity,position.stockPrice,position.mktV);
+				}
+				
+			pos.getAnalyticalResults(shocks);
+			p.addPosition(pos);
+			});
+		
+		
+		//******************************************************************
+		//******************************************************************
+		
+	</script>
+	
+	<!-- ><svg></svg> -->
+	<br />
+	<br />
+	<p>test</p>
+</body>	
+</html>

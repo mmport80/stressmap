@@ -1,0 +1,554 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+	<!--Needed for some reason-->
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	
+	<style>
+		rect{
+			stroke-width: 1;
+			fill: red;
+			stroke: red;
+			fill-opacity: 0.06;
+			stroke-opacity: 1;
+			}	
+		.legend{
+			stroke-width: 1;
+			fill: red;
+			stroke: red;
+			fill-opacity: 1;
+			stroke-opacity: 1;
+			}	
+		circle{
+			fill: white;
+			stroke: blue;
+			}
+		#sortable{
+			width: 540px;
+			}
+		#header{
+			
+			}
+		#riskFactors{
+			background-color: yellow; border-style: solid; border-color: red;
+			}
+		#risk_factor{
+			width: 150px;
+			}
+		
+		#underlyingPriceLowerLimit{
+			width: 150px;
+			}
+		#interestRateLowerLimit{
+			width: 150px;
+			}
+		#volatilityRateLowerLimit{
+			width: 150px;
+			}
+		#dividendYieldLowerLimit{
+			width: 150px;
+			}
+		#underlyingPriceUpperLimit{
+			width: 150px;
+			}
+		#interestRateUpperLimit{
+			width: 150px;
+			}
+		#volatilityRateUpperLimit{
+			width: 150px;
+			}
+		#dividendYieldUpperLimit{
+			width: 150px;
+			}
+	</style>
+	
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="./libs/underscore-min.js"></script>
+	
+	<script src="./libs/utils.js"></script>
+	<script src="./libs/core.js"></script>
+	<script src="./libs/graphs.js"></script>
+	<script src="./libs/ui.js"></script>
+</head>
+<body>
+	<form>
+		<div>
+			<!--Threshold is needed before anything else - everything should be greyed out before this value is input-->
+			Threshold
+			<input id = 'threshold' type="range" min="-0.99" max="0" value='-0.2' name="threshold"  step="0.01"/>
+			<span id="thresholdPercentage">20</span>% Loss
+		</div>	
+		<div>
+			<!--Update as graphs are updated.  Total is number of permuations...-->
+			<span id="percentageComplete">0</span>% Complete
+		</div>
+		<div>
+			Upload Portfolio CSV File 
+			<input type="file" id="portfolioFileInput">	
+		</div>
+		<div>
+			Upload Historical Stress CSV File
+			<input type="file" id="historicalStressFileInput">
+		</div>
+		
+	<!--One form per graph-->
+	<!--If upper and lower shock limits are equal then axis line becomes a point - once dimensional graph is the result-->
+	<!--Select option values are updated depending on position types in portfolio-->
+	<!--If a graph already has a value in it, then drops out of the list-->
+	<!--Grey out upper and lower limits until axis is given-->
+	<!--If axis is not selected, then shocks defaults to zero; one dimensional graph (if other axis has ben selected)-->
+	<!--Automatically select resolution based on number of axes / factors-->
+		<!--5 factors - 3^5 = 243-->
+		<!--4 factors, then 4 shocks each, so 4^4 = 256-->
+		<!--If 3 factors, then 6^3 = 216-->
+		<!--If div and int have zero shocks, then maximum resolution for price and vol is 16^2 = 256-->
+		<!--Ability to tweak number of shocks in individual graphs while keeping under 256 limit? maybe too complicated...-->
+		<!--
+		-->
+	
+	
+	<!--
+	On move 
+		Compare new and orig factor array
+		Each pair makes up a graph
+		Any change implies new graph
+		Update all graphs
+		//Update/create graphs when necessary
+	-->
+		
+		<br />
+		
+		<div id="sortable" style="">
+			<div >
+				<span id = "columnWidth" >
+					Risk Factor
+				</span>
+				<span id = "columnWidth">
+					Upper Limit
+				</span>
+				<span  id = "columnWidth">
+					Lower Limit
+				</span>
+			</div>
+			<div id = "riskFactors">
+				<span  id ="risk_factor">underlying_price</span>
+				<input    id = 'underlyingPriceLowerLimit' type="number" value='0' name="underlyingPriceLowerLimit" step = "0.01" />
+				<input   id = 'underlyingPriceUpperLimit' type="number" value='0' name="underlyingPriceUpperLimit" step = "0.01" />
+				<!--disable factor-->
+				<span  >[Disable]</span>
+			</div>
+			<div id = "riskFactors">
+				<span  id ="risk_factor">interest_rate</span>
+	  			<input  id = 'interestRateLowerLimit' type="number" value='0' name="interestRateLowerLimit" step = "0.01" />
+	  			<input id = 'interestRateUpperLimit' type="number" value='0' name="interestRateUpperLimit" step = "0.01" />
+	  			<span   >[Disable]</span>
+			</div>
+			<div id = "riskFactors">
+				<span   id ="risk_factor">volatility_rate</span>
+	  			<input id = 'volatilityRateLowerLimit' type="number" value='0' name="volatilityRateLowerLimit" step = "0.01" />
+	  			<input    id = 'volatilityRateUpperLimit' type="number" value='0' name="volatilityRateUpperLimit" step = "0.01" />
+	  			<span   >[Disable]</span>
+			</div>
+			<div id = "riskFactors">
+				<span   id ="risk_factor">dividend_yield</span>
+	  			<input  id = 'dividendYieldLowerLimit' type="number" value='0' name="dividendYieldLowerLimit" step = "0.01" />
+	  			<input  id = 'dividendYieldUpperLimit' type="number" value='0' name="dividendYieldUpperLimit" step = "0.01" />
+	  			<span  >[Disable]</span>
+			</div>
+		</div>
+	
+	</form>
+	
+	<script>
+	
+		//html
+		//ui
+		//graphs
+		//utils
+		//
+		
+		//window.onload = fileInput();
+		
+	
+		//convert graphs dimensions etc. into new more flexible methos
+		//link up html controls with graphs
+		//refresh if changes are made
+		//grab generated pl results if possible
+		//
+		//should only update red square if all positions for the combo of shocks has been calc'ed
+		//because if pl less than threshold; later positions may have +ve pls
+		//otherwise you could insert a red square and then remove afterwards if pl goes back above threshold
+	
+	
+		//no data is replicated across graphs
+		//so there's a single vol shock; single interest shock etc.
+		//
+		
+		//1) Need to update shock parameters (limits)
+		//2) Need to update which graphs show which factors
+		
+		//update parameters, wipe everything and kick off init again?
+		
+		//console.log("obob");
+		//var riskFactors = [];
+		
+		
+		$(function() {
+		    	$( "#sortable" ).sortable({
+				update: function(event, ui) {
+					riskFactors = [];
+					$( "span[id$='risk_factor']" ).each(
+						function (i,d) {
+							riskFactors.push(d.textContent);
+							}
+						);
+					//probably can assume that any change will result in new factor array
+					if ( !_.isEqual( f.factors, riskFactors ) ) {
+						f = new Factors();
+						f.factors = riskFactors.slice(0).reverse();
+						gx.forEach( function(graph){
+							graph.removeGraph();		
+							});
+				
+						gx = [];
+						gx = gx.concat( createGraphs( f.factors.slice(0) ) );
+						
+						gx.forEach( function(graph){
+							px.pls.forEach( function(pl) {
+								graph.appendPL(pl);
+								});
+							});
+						}
+						
+					}
+				});
+			});
+			
+			
+		
+		
+		
+		d3.select("#portfolioFileInput").on("change", function(){
+			if (window.File && window.FileReader && window.FileList && window.Blob) {
+				var uploadFile = this.files[0];
+				var reader = new window.FileReader();
+				
+				reader.onload = function(){
+					
+					
+					//**
+				
+					//reset graph data
+					//find variables to reset for change in risk factor order
+					//break into two functions
+					
+					//graph delete / reset
+					gx.forEach( function(graph){
+						graph.removeGraph();		
+						});
+				
+					gx = [];
+					
+					totalMarketValue = 0;
+					totalPositions = 0;
+					plCalcCount = 0;
+			
+					px = new PLs();
+					f = new Factors();
+			
+					//reset completion status
+					d3	.select("#percentageComplete")
+						.text(0);
+					
+					//**
+					
+					
+					processPositions( d3.csv.parse(reader.result) );	
+					};
+				reader.readAsText(uploadFile);
+				}
+			else {
+				alert("Your browser won't let you save this graph -- try upgrading your browser to IE 10+ or Chrome or Firefox.");
+				}
+
+			});
+			
+			
+		d3.select("#historicalStressFileInput").on("change", function(){
+			if (window.File && window.FileReader && window.FileList && window.Blob) {
+				var uploadFile = this.files[0];
+				var reader = new window.FileReader();
+			
+				reader.onload = function(){
+					//remove previous circles
+					gx.forEach( function(graph){
+						graph.removeAllCircles();
+						graph.appendStressCircles( d3.csv.parse(reader.result) );		
+						});
+					//need to update
+						
+					};
+				reader.readAsText(uploadFile);
+				}
+			else {
+				alert("Your browser won't let you save this graph -- try upgrading your browser to IE 10+ or Chrome or Firefox.");
+				}
+
+			});
+			
+		
+		
+		//Changes UI, no need to grab more data
+		//change threshold, remove current rectangles, run through PLs again
+		d3.select("#threshold").on("input", function() {
+			threshold = +this.value;
+		
+			//console.log(threshold);
+			updateThresholdPercentage();
+			
+			//remove old and update
+			gx.forEach( function(graph){
+				graph.removeAllPls();
+				
+				px.pls.forEach( function(pl) {
+					graph.appendPL(pl);
+					});
+				});
+			});
+		
+		//Changes UI, not data
+		//Need to have one for each factor
+		//Should appear below each graph
+		d3.select("#xAxis").on("change", function() {
+			
+			
+			//swap around entries in the f.factors array and regen
+			
+			//current graph
+			
+				//pair remaining factor with chosen factor
+			
+			//find the other graph which currently has this factor
+			
+				//pair discarded factor with remaining factor
+			
+				//1,2,3,4 becomes 1,3,2,4 if 3 is the chosen factor
+			
+			xf = this.value;
+			
+			
+			
+			r = gx.filter(function(s){
+				return (s["xAxisText"] == xf) || (s["yAxisText"] == xf);
+				})[0];
+			//console.log(r);
+			
+			//delete graph(s)
+			//setup graph(s) again
+			
+			
+			
+			//run through pls
+			//update input fields
+			//update possible selection options
+			
+			});
+		d3.select("#yAxis").on("change", function() {
+			console.log("yAxis "+(this.value));
+			});
+			
+		//changes data
+		//need to have a pair for each factor
+		d3.select("#xLowerLimit").on("input", function() {
+			updateShockParameter(shockParameters,"volatility_rate","lower",+this.value);
+			});
+		d3.select("#xUpperLimit").on("input", function() {
+			updateShockParameter(shockParameters,"volatility_rate","upper",+this.value);
+			});
+		d3.select("#yLowerLimit").on("input", function() {
+			updateShockParameter(shockParameters,"underlying_price","lower",+this.value);
+			});
+		d3.select("#yUpperLimit").on("input", function() {
+			updateShockParameter(shockParameters,"underlying_price","upper",+this.value);
+			});
+	
+		//********************
+		//Inputs
+		//change to %?
+		var threshold = -0.2;
+	
+		var filePath = "test_data/equity.csv";
+		
+		
+		
+		//Shocks to be applied
+		//Remove in favour of generic shocks
+		var volShocks = [{volatility_rate:-0.66},{volatility_rate:-0.06},{volatility_rate:0.6},{volatility_rate:1.2}];
+		var eqShocks = [{underlying_price:-0.35},{underlying_price:-0.2},{underlying_price:-0.05},{underlying_price:0.1}];
+		var iShocks = [{interest_rate:-0.03},{interest_rate:-0.01},{interest_rate:0.01},{interest_rate:0.03}];
+		var divShocks = [{dividend_yield:-0.03},{dividend_yield:-0.01},{dividend_yield:0.01},{dividend_yield:0.03}];
+		
+		//defaults?
+		//maybe grab defaults from most extreme stress shocks, if available?
+		var genericShocks = {	volatility_rate:	[-0.66,-0.06,0.6,1.2],
+					underlying_price:	[-0.35,-0.2,-0.05,0.1],
+					interest_rate:		[-0.03,-0.01,0.01,0.03],
+					dividend_yield:		[-0.03,-0.01,0.01,0.03]
+					}
+		
+		var shockParameters = [	{shockName: "volatility_rate",	lower: -0.66, upper: 1.2},
+					{shockName: "underlying_price", lower: -0.35, upper: 0.1},
+					{shockName: "interest_rate",	lower: -0.03, upper: 0.03},
+					{shockName: "dividend_yield",	lower: -0.03, upper: 0.03}
+					];
+	
+		
+		//******************************************************************
+		//*********************************************************************
+		//Generate shock permutations
+		//x,y are inputs, x has to be one dimensional vector; y can be multi-dimensional
+		
+		//&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		var shocks = 	dualVectors(volShocks,
+					dualVectors(iShocks,
+						dualVectors(eqShocks,divShocks)
+						)
+					);
+		
+		
+		//******************************************************************
+		//PL store
+		var px = new PLs();
+		var f = new Factors();
+		var gx = [];
+		
+		var totalMarketValue = 0;
+		var totalPositions = 0;
+		var plCalcCount = 0;
+		
+		//should probably do this with anon functions... and only need one loop
+		function countPositionsandGetTotalMarketValue(positions) {
+			positions.forEach( function(position) {
+				totalMarketValue = totalMarketValue + (+position.quantity * +position.mktV);
+				totalPositions = totalPositions + 1;	
+				});
+			}
+		function getFactors(positions) {
+			positions.forEach( function(position) {
+				if (position.exposure == 'option') {
+					//check for new factors
+					f.addFactor(["underlying_price","volatility_rate","interest_rate","dividend_yield"]);
+					}
+				else if (position.exposure == 'equity')  {
+					f.addFactor(["underlying_price"]);
+					}
+				else if (position.exposure == 'cash')  {
+					//do nothing
+					totalMarketValue = totalMarketValue + (+position.quantity * +position.mktV);
+					}
+				});
+			}
+		
+		//
+		function processPositions(positions){
+			//collect factors
+			//when factor order changes; 
+				//totalmarketvalue doesn't change; 
+				//total positions does not change;
+				//no need to add more factors
+				
+			countPositionsandGetTotalMarketValue(positions);
+			getFactors(positions);
+			
+			//display factors
+			gx = gx.concat( createGraphs( f.factors.slice(0) ) );
+			
+			//evaluate
+			positions.forEach( function(position) {
+				var vd = new Date(position.vDate+" UTC");
+				var ed = new Date(position.eDate+" UTC");
+				
+				totalPositions = totalPositions + 1;
+				
+				//collect factors by each position
+				//use collected factors to generate graphs
+				if (position.exposure == 'option') {
+					//incorporate a constructor to calibrate as object is created?
+					//market value is unit price or position value??
+					var pos = new Option(+position.quantity,vd,+position.strike,ed,position.putOrCall,+position.stockPrice,+position.mktV,+position.divYield,+position.intRate);
+					//calibrate then shock and revalue
+					pos.calibrate(shockLoop);
+					}
+				else if (position.exposure == 'equity')  {
+					var pos = new Equity(+position.quantity,+position.stockPrice,+position.mktV);
+					//shock and revalue
+					//only shock relevant variables?
+					shockLoop(pos);
+					}
+				else if (position.exposure == 'cash')  {
+					var pos = new Cash(+position.quantity,+position.mktV);
+					//shock and revalue
+					//only shock relevant variables?
+					shockLoop(pos);
+					}
+				});
+			}
+
+
+		
+		//*********************************************************************
+		//*********************************************************************
+		function init(filePath){
+
+			//get array of positions and valuations
+			//have a default
+			//when selected, load up new file
+			//hive this off into seperate function to be called in both cases
+			d3.csv(filePath, function(error, positions) {
+				processPositions(positions);
+				});
+			}
+		//How do you know which factors are needed and therefore which graphs to draw???
+		//By the shocks? Hmm, need to select default shocks firstly...
+		init(filePath);
+		
+		
+		//graphs are displayed automatically
+		//ability to customise:
+		//a) axes limits
+		//b) factor for each axis
+		//c) upload portfolio data
+		//d) upload stress data
+		
+		//x) automatic resolution
+		
+		
+		      
+      		
+		
+      		
+
+	</script>
+</body>	
+</html>

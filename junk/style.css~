@@ -1,0 +1,172 @@
+body {
+	color: #1B325F;
+	background-color: white;
+	font-family: Verdana, Geneva, sans-serif;
+	}
+
+rect{
+	stroke-width: 1;
+	stroke-opacity: 1;
+	/*Colour*/
+	/*fill: white;*/
+	fill: white;
+	/*stroke: black;*/
+	stroke: #1B325F;
+	}	
+
+.legend{
+	stroke-width: 1;
+	fill-opacity: 1;
+	stroke-opacity: 1;
+	}	
+text {
+	fill: #1B325F;
+	color: #1B325F;
+	}
+svg{	
+	/*Colour*/
+	/*border: thin solid black;*/
+	border: thin solid #1B325F;
+	margin-bottom: 0.25em;
+	margin-top: 0.25em;
+	align: left;	
+	padding: 0.25em;
+	}
+svg.inputGui{
+	border: none;
+	margin: 0em;
+	padding: 0em;
+	height: 7em
+	}
+rect.inputGui{
+	/*Colour*/
+	/*fill: white;*/
+	fill: white;
+	stroke-opacity: 1
+	}
+.red{
+	/*Colour*/
+	/*stroke: red;
+	color: red;
+	fill: red;*/
+	
+	stroke: #FF3D5A;
+	color: #FF3D5A;
+	fill: #FF3D5A;
+	}
+.redx{
+	fill: #FF3D5A;
+	stroke: #FF3D5A;
+	stroke-opacity: 1;
+	
+	}
+.black{
+	/*Colour*/
+	/*stroke: black;
+	color: black;
+	border-color: black;*/
+	
+	stroke: #1B325F;
+	color: #1B325F;
+	border-color: #1B325F;
+	}
+circle{	
+	/*Colour*/
+	/*fill: white;*/
+	fill: white;
+	stroke: #1B325F;
+	stroke-width: 1;
+	}
+	
+.blackZeroLine{
+	stroke: #1B325F;
+	stroke-width:0.5;
+	}
+a {
+	/*font-weight: bold;*/
+	
+	text-decoration: none;
+	/*Colour*/
+	/*color:red;*/
+	color: #FF3D5A;
+	}
+
+.icon-sortable {
+   	display: inline-block;
+   	font-size: 0.50em;
+   	vertical-align: middle;
+	}
+.riskFactor:hover {
+	    cursor: pointer;
+	}
+.riskFactor{
+	    cursor: move;
+	}
+.riskFactor_disabled{
+	/*Colour*/
+	color: #9CC4E4
+	}
+span.riskFactor {
+	/*border: thin solid black;*/
+	 
+	/*Colour*/
+	background-color: white;
+	}
+	
+span.grey {
+	/*Colour*/
+	background-color: #E9F2F9;
+	}
+.xAxis path {
+	display: none;
+	}
+.yAxis path {
+	display: none;
+	}
+.inputGui{
+	padding-bottom: 2em; 
+	float: left;
+	display: block;
+	width: 100%;
+	}
+input {
+	color: #1B325F;
+	margin-right: 0.1em;
+	}
+#graphs{
+	float: left; 
+	display: inline-block;
+	width: 40em;
+	}
+#mainColumn{
+	width: 80em; 
+	margin:0 auto;
+	}
+#leftColumn{
+	float: left;
+	width: 22em;
+	}
+#title{
+	font-size: 5.5em;
+	float: left;
+	font-family: 'Ubuntu', sans-serif;
+	font-weight: bold;
+	}
+#links{
+	float: left; 
+	display: inline-block;
+	width: 100%;
+	/*Colour*/
+	/*background-color: lightsteelblue;*/
+	background-color: #E9F2F9;
+	margin-bottom: 0.75em;
+	padding: 0.25em;
+	}
+.link{
+	margin-right: 1em;
+	}
+p {font-size: 1.5em}
+p.first:first-letter {
+	font-size: 2em
+	font-weight: bold;
+	}

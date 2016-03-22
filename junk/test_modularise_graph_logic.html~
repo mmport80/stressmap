@@ -1,0 +1,476 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>VolKills.org Javascript Example</title>
+	
+	<link rel='shortcut icon' type='image/x-icon' href='/pix/favicon.ico' />
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	
+	<style>
+		rect{
+			stroke-width: 1;
+			fill: red;
+			stroke: red;
+			fill-opacity: 0.06;
+			stroke-opacity: 1;
+			}	
+		.legend{
+			stroke-width: 1;
+			fill: red;
+			stroke: red;
+			fill-opacity: 1;
+			stroke-opacity: 1;
+			}	
+		circle{
+			fill: white;
+			stroke: blue;
+			}
+	</style>
+	
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./libs/double_store_lib_1.js"></script>
+</head>
+<body>
+	<form>
+		<div>
+			<!--Threshold is needed before anything else - everything should be greyed out before this value is input-->
+			<input onClick="this.setSelectionRange(0, this.value.length)" class = '' type="text" value='Threshold' name="threshold" />
+			<!--Update as graphs are updated.  Total is number of permuations...-->
+			55% Complete
+		</div>
+	</form>
+	
+	<form>
+		<div>
+			<!--Upload portfolio CSV File-->
+			Upload Portfolio CSV File
+			<input type="file" name="PortfolioFile" />
+			<input type="submit" />
+		</div>
+	</form>
+	
+	<!--One form per graph-->
+	<!--If upper and lower shock limits are equal then axis line becomes a point - once dimensional graph is the result-->
+	<!--Select option values are updated depending on position types in portfolio-->
+	<!--If a graph already has a value in it, then drops out of the list-->
+	<!--Grey out upper and lower limits until axis is given-->
+	<!--If axis is not selected, then shocks defaults to zero; one dimensional graph (if other axis has ben selected)-->
+	<!--Automatically select resolution based on number of axes / factors-->
+		<!--5 factors - 3^5 = 243-->
+		<!--4 factors, then 4 shocks each, so 4^4 = 256-->
+		<!--If 3 factors, then 6^3 = 216-->
+		<!--If div and int have zero shocks, then maximum resolution for price and vol is 16^2 = 256-->
+		<!--Ability to tweak number of shocks in individual graphs while keeping under 256 limit? maybe too complicated...-->
+	
+	<form>
+		<div>
+		X Axis
+		<select>
+			<option value="Equity Price">Equity Price</option>
+			<option value="Interest Rate">Interest Rate</option>
+			<option value="Equity Volatility">Equity Volatility</option>
+			<option value="Dividend Yield">Dividend Yield</option>
+		</select>
+		<input onClick="this.setSelectionRange(0, this.value.length)" class = '' type="text" value='Upper Limit' name="threshold" />
+		<input onClick="this.setSelectionRange(0, this.value.length)" class = '' type="text" value='Lower Limit' name="threshold" />
+		</div>
+		<div>
+		Y Axis
+		<select>
+			<option value="Equity Price">Equity Price</option>
+			<option value="Interest Rate">Interest Rate</option>
+			<option value="Equity Volatility">Equity Volatility</option>
+			<option value="Dividend Yield">Dividend Yield</option>
+		</select>
+		<input onClick="this.setSelectionRange(0, this.value.length)" class = '' type="text" value='Upper Limit' name="threshold" />
+		<input onClick="this.setSelectionRange(0, this.value.length)" class = '' type="text" value='Lower Limit' name="threshold" />
+		</div>
+	</form>
+	<script>
+		//********************
+		//Inputs
+		var threshold = -400;
+		
+		var filePath = "test_data/covered_call.csv";
+		
+		//Shocks to be applied
+		var volShocks = [{volatility_rate:-0.75},{volatility_rate:-0.25},{volatility_rate:0.25},{volatility_rate:0.75}];
+		var eqShocks = [{underlying_price:-0.45},{underlying_price:-0.15},{underlying_price:0.15},{underlying_price:0.45}];
+		var iShocks = [{interest_rate:-0.03},{interest_rate:-0.01},{interest_rate:0.01},{interest_rate:0.03}];
+		var divShocks = [{dividend_yield:-0.03},{dividend_yield:-0.01},{dividend_yield:0.01},{dividend_yield:0.03}];
+		
+		//******************************************************************
+		//PL store
+		var px = new PLs();
+	
+		//******************************************************************
+		//******************************************************************
+		//Shocks converted
+		var volShocksArray = convertKeyValuesToArray(volShocks.slice(0)); 
+		var eqShocksArray = convertKeyValuesToArray(eqShocks.slice(0));
+		var iShocksArray = convertKeyValuesToArray(iShocks.slice(0));
+		var divShocksArray = convertKeyValuesToArray(divShocks.slice(0));
+		
+		//******************************************************************
+		//******************************************************************
+		//convert key:values to array
+		function convertKeyValuesToArray(keyValues) {
+			kvLength = keyValues.length;
+			var r = keyValues.pop();
+			var value = r[Object.keys(r)[0]];
+			if (kvLength == 1) {
+				return [value];
+				}
+			else {
+				return [value].concat(convertKeyValuesToArray(keyValues));
+				}
+			}
+		
+		//******************************************************************
+		//*********************************************************************
+		//Generate shock permutations
+		//x,y are inputs, x has to be one dimensional vector; y can be multi-dimensional
+		var shocks = 	dualVectors(volShocks,
+					dualVectors(iShocks,
+						dualVectors(eqShocks,divShocks)
+						)
+					);
+		
+		//******************************************************************
+		//******************************************************************
+		//Permutations
+		//fixed x
+		function singleX(x,y) {
+			
+			//get conmunal variables up front
+			var yLength = y.length;
+			var yp = y.pop();
+			var xKey = Object.keys(x)[0];
+			
+			//result to return
+			var r = [];
+			
+			//grabs all keys - if y has multiple keys
+			Object.keys(yp).forEach( function(key) {
+				r[key] = yp[key];
+				});
+			
+			//add x's info
+			r[xKey] = x[xKey];
+			
+			//simple return condition
+			if (yLength == 1) {
+				return [r];
+				}
+			else {
+				//return current result and grab another y
+				return [r].concat(singleX(x,y.slice(0)));
+				}
+			}
+		
+		//2 full vectors to start with
+		function dualVectors(x,y) {
+			//grab communal data up front
+			var xLength = x.length;
+			var xx = singleX(x.pop(),y.slice(0));
+			
+			//Simple return condition
+			if (xLength == 1) {
+				return xx;
+				} 
+			else {
+				//return current result and grab next
+				return xx.concat(dualVectors(x.slice(0),y.slice(0)));
+				}
+			}
+		
+		//*********************************************************************
+		//shock cycle
+		function shockLoop(pos) {
+			//using global variable
+			shocks.forEach( function(shock){
+				pos.value(shock);
+				});
+			}
+		
+		//*********************************************************************
+		//*********************************************************************
+		//1 read position from csv
+		//2 calibrate if necessary - i.e. get iv
+		//3 revalue based on shocks
+		//4 store generated PLs
+			//store for each pos
+			//sum PLs for positions for p*v
+			
+			//update running total for p*v*i*c scenario as each position's PL is calculated
+			//add red square for that scenario if threshold has been breached
+			//threshold breach means large loss for a particular p*v but any c*i
+			//which means you can have c*i threshold breaches for any one square
+			
+		//5 update graph(s)
+			//if graph is v*p, there will be c*i times the number of updates
+			//e.g. there for 4*4 and 4*4 matrices, there will be 16 results for each cell in the v*p matrix
+		
+		
+		function init(filePath){
+			//get array of positions and valuations
+			d3.csv(filePath, function(error, positions) {
+				positions.forEach( function(position) {
+					var vd = new Date(position.vDate+" UTC");
+					var ed = new Date(position.eDate+" UTC");
+					if (position.exposure == 'option') {
+						//incorporate a constructor to calibrate as object is created?
+						//market value is unit price or position value??
+						var pos = new Option(+position.quantity,vd,+position.strike,ed,position.putOrCall,+position.stockPrice,+position.mktV,+position.divYield,+position.intRate);
+						//calibrate then shock and revalue
+						pos.calibrate(shockLoop);
+						}
+					else if (position.exposure == 'equity')  {
+						var pos = new Equity(+position.quantity,+position.stockPrice,+position.mktV);
+						//shock and revalue
+						//only shock relevant variables?
+						shockLoop(pos);
+						}
+					else if (position.exposure == 'cash')  {
+						var pos = new Cash(+position.quantity,+position.mktV);
+						//shock and revalue
+						//only shock relevant variables?
+						shockLoop(pos);
+						}
+					});	
+				});	
+			}
+		
+		init(filePath);
+		
+		//*************************************************************
+		//*************************************************************
+		//SVG logic
+		
+		//******************************************************************
+		//******************************************************************
+		//graph starts here
+		
+		var margin = {top: 20, right: 20, bottom: 30, left: 40};
+		
+		var width = 400 + margin.left + margin.right;
+		var height = 400 + margin.top + margin.bottom;
+	
+		function getXAxis(shocksArray){
+			return d3.scale.linear()
+				.domain(
+					[ Math.min.apply(null,shocksArray), Math.max.apply(null,shocksArray) ]
+					)
+				.range([ 0, width ]);
+			}
+		function getYAxis(shocksArray){
+			return d3.scale.linear()
+				.domain(
+					[Math.max.apply(null,shocksArray),Math.min.apply(null,shocksArray)]
+					)
+				.range([ margin.bottom,height ]);
+			}
+	
+		//squares for each PL
+	
+		//******************************************************************
+		//******************************************************************
+		//p*v specific logic
+		var x = getXAxis(volShocksArray);
+		var y = getYAxis(eqShocksArray);
+		
+		graph("Equity Price % Shock","Equity Volatility % Shock","pv",eqShocksArray,volShocksArray,x,y);
+		
+		//**************		
+		var xd = getXAxis(divShocksArray);
+		var yi = getYAxis(iShocksArray);
+		
+		graph("Div % Shock","Interest % Shock","di",divShocksArray,iShocksArray,xd,yi);
+		
+		
+		//******************************************************************
+		//******************************************************************
+		//create graph
+		
+		function graph(xAxisText,yAxisText,svgContainerName,xShocksArray,yShocksArray,xAxis,yAxis){	
+			
+			svgContainer = d3	.select("body")
+						.append("svg")
+						.attr("width", width)
+						.attr("height", height)
+						.attr("id",svgContainerName);
+			
+			svgContainer	.append("g")
+					.attr("id","Squares"+svgContainerName);
+			
+			//labels for each equity shock
+			svgContainer	.append("g")
+					.selectAll(".xAxis")
+					.data(xShocksArray)
+					.enter()
+					.append("text")             
+					.attr("transform", "translate("+(0)+","+(margin.top)+")")
+					.text(function (d) { return d; })
+					.attr("dy", "-.4em")
+					.attr("x", 0)
+		                	.attr("y", function (d) { return yAxis(d); });
+	        
+		        //label for equity shock axis
+		        svgContainer	.append("text")     
+					.text(xAxisText)
+					.attr("x", 0)
+		                	.attr("y", margin.top);
+	                	
+			//labels for each vol shock
+			svgContainer	.append("g")          
+					.selectAll(".yAxis")
+					.data(yShocksArray)
+					.enter()
+					.append("text")             
+					.attr("transform", "translate("+(margin.left)+","+(margin.top)+")")
+					.text(function (d) { return d; })
+					.attr("x", function (d) { return xAxis(d); })
+		                	.attr("y", height+margin.top);
+		
+			//label for vol shock axis
+		        svgContainer	.append("text")     
+					.text(yAxisText)
+					.attr("x", width-75)
+		                	.attr("y", height+margin.top+margin.bottom+10);
+		     
+	    		//******************************************************************
+	    		//******************************************************************
+	      		//Legend
+		
+	    		//red square
+	    		svgContainer	.append("g")           
+	    				.attr("transform", "translate("+(30)+","+(height + margin.top + 60)+")")
+	    				.append("rect")
+	    				.attr("width", 20)
+	    				.attr("height", 20)
+	    				.attr("rx", 1)
+	                  		.attr("ry", 1)
+					.style("fill-opacity",1)
+					.style("stroke-opacity",1);
+      			
+      			//Label
+	          	svgContainer	.append("text")     
+	          			.text("Institutional collapse magnitude loss")
+					.attr("x", margin.left+20)
+	              			.attr("y", height+margin.top+margin.bottom+45);
+	
+	    		//blue circle
+	    		svgContainer	.append("g")           
+	    				.attr("transform", "translate("+(30)+","+(height + margin.top + 120)+")")
+	    				.append("circle")
+	    				.attr("cx", 10)
+	    				.attr("cy", 10)
+	    				.attr("r", 10);
+              		
+              		//Label
+	      	       	svgContainer	.append("text")     
+	                  			.text("Historical stress event")
+	            				.attr("x", margin.left+20)
+	            	                	.attr("y", height+margin.top+margin.bottom+103);
+						
+	      		//******************************************************************
+	      		//******************************************************************
+	      		var circles = svgContainer	.append("g")
+	      						.selectAll("circle");
+
+	      		//read historical stress scenarios from the csv
+	      		//
+	      		d3.csv("test_data/historical_stress_scenarios.csv", 
+	      			function(d) {
+	      				return { volShock:d.volShock, eqShock:d.eqShock, description:d.description, start_date:d.start_date, end_date:d.end_date };
+	      				},
+	      			function(error,data3){
+	      				var data2 = circles	.data(data3)
+	      							.enter()
+	      							.append("circle");
+
+	      				data2
+	      					//tweaked in order to align with axes	
+	      					.attr("transform", "translate("+(margin.left)+","+(0)+")")
+	      					.attr("cx", function (d) { return xAxis(+d.volShock);	})
+	      					.attr("cy", function (d) { return yAxis(+d.eqShock);	})
+	      					.attr("r", 10)
+	      					.append("title")
+	      					.text(function(d) { return d.description+" ("+d.start_date+"-"+d.end_date + ")"});
+	      				}
+	      			);
+			}
+
+      		//******************************************************************
+      		//******************************************************************
+		//add red pnl squares
+		
+		var squaresPV = d3.select("#Squarespv").selectAll("rect");
+		var squaresDI = d3.select("#Squaresdi").selectAll("rect");	
+		
+		//remove references to specific shocks
+		//need to add axes
+		//need to add labels for each shock
+		function appendPL(pL){
+								
+				if (pL.pl < threshold) {
+					squaresPV
+						.data([pL])
+						.enter()
+						.append("rect")
+						//tweaked in order to align with axes	
+						.attr("transform", "translate("+(margin.left)+","+(0)+")")
+						
+						.attr("x", function (d) { return x(d.shock.volatility_rate); })
+						.attr("y", function (d) { return y(d.shock.underlying_price); })
+						.attr("width", 20)
+						.attr("height", 20)
+						.attr("rx", 1)
+		              			.attr("ry", 1)
+						.append("title")
+						.text(function(d) { return "Vol Shock " + d.shock.volatility_rate + ", Equity Shock " + d.shock.underlying_price });
+				
+					squaresDI
+						.data([pL])
+						.enter()
+						.append("rect")
+						//tweaked in order to align with axes	
+						.attr("transform", "translate("+(margin.left)+","+(0)+")")
+						.attr("x", function (d) { return xd(d.shock.dividend_yield); })
+						.attr("y", function (d) { return yi(d.shock.interest_rate); })
+						.attr("width", 20)
+						.attr("height", 20)
+						.attr("rx", 1)
+		              			.attr("ry", 1)
+						.append("title")
+						.text(function(d) { return "Div Shock " + d.shock.dividend_yield + ", Int Shock " + d.shock.interest_rate });
+					}
+		      }
+		
+		      
+      		
+		
+      		
+
+	</script>
+</body>	
+</html>

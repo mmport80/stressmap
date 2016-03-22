@@ -1,0 +1,5 @@
+exposure,quantity,vDate,strike,eDate,putOrCall,stockPrice,mktV,divYield,intRate
+option,1,2014/08/14,1850,2016/12/16,call,1955.18,237,0.017,0.001
+option,-2,2014/08/14,1950,2016/12/16,call,1955.18,177,0.017,0.001
+option,1,2014/08/14,2075,2016/12/16,call,1955.18,124,0.017,0.001
+cash,8700,2014/08/14,,,,,1,0,0

@@ -1,0 +1,3 @@
+exposure,style,quantity,effective_date,strike_price,expiry_date,put_or_call,underlying_price,market_value,dividend_yield,rate_1y
+option,european,-1,2014/08/14,1950,2016/12/16,put,1995.18,225,0.017,0.001
+option,european,-1,2014/08/14,1950,2016/12/16,call,1995.18,181,0.017,0.001

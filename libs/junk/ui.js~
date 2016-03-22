@@ -1,0 +1,36 @@
+//find factor
+//update up or low limit
+//return factors
+function updateShockParameter(sP,factor,upperOrLower,newLimit) {
+	sP.filter(function(s){
+		return s.shockName==factor;
+		})[0][upperOrLower] = newLimit;
+	
+	sP.factor.upperOrLower = newLimit
+	
+	}
+
+
+//if you change an axis on one graph
+//then you are really taking from one graph and putting it into another
+//i.e. swapping
+function updateGraphAxis(n) {
+        
+	}
+
+
+//********************
+//input
+function updatePercentageComplete(){
+	//output
+	d3	.select("#percentageComplete")
+		//pls calc'ed so far  / total number of pls to be calced * number of positions
+		.text(Math.round(100 * ( plCalcCount ) / (256 * totalPositions)));
+	}
+	
+function updateThresholdPercentage(){
+	//output
+	d3	.select("#thresholdPercentage")
+		.text(Math.round(-threshold*100));
+	}
+	

@@ -1,0 +1,207 @@
+<!--
+    Stress Map Javascript example
+    Copyright (C) 2014 John Orford
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<head>
+	<title>Stress Map - Fail Safe Portfolio Stress Testing</title>
+	<!--Needed for some reason-->
+	<!--
+	<link rel="stylesheet" type="text/css" href="./libs/nv.d3.css">
+	-->
+	<style>
+		rect{
+			stroke-width: 1;
+			stroke-opacity: 1;
+			fill: white;
+			stroke: black;
+			}	
+		.legend{
+			stroke-width: 1;
+			fill: red;
+			stroke: red;
+			fill-opacity: 1;
+			stroke-opacity: 1;
+			}	
+		svg{	border: thin solid black;
+			margin: 0.5em;
+			padding: 0.5em;
+			align: left;	
+			}
+		circle{	fill: white;
+			stroke: blue;
+			}
+		.icon-sortable {
+		   	display: inline-block;
+		   	font-size: 0.50em;
+		   	vertical-align: middle;
+			}
+		a {
+			text-decoration: underline;
+			}
+		span.riskFactor {
+			border: thin solid black;
+			margin: 0.5em;
+			}
+		.xAxis path {
+  			display: none;
+			}
+		.yAxis path {
+  			display: none;
+			}
+	</style>
+	<!--
+	height: 35em;			
+	width: 40em;		
+	-->
+	<script src="./libs/d3.v3.min.js" charset="utf-8"></script>
+	<script src="./libs/jquery.min.js"></script>
+	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="./libs/underscore-min.js"></script>
+	
+	
+	<script src="./libs/utils.js"></script>
+	<script src="./libs/core.js"></script>
+	<script src="./libs/graphs2.js"></script>
+	<script src="./libs/stress_map.js"></script>
+	
+	
+</head>
+<body>
+	<div style="width: 80em;">
+		<div style="float: left;width: 22em;">
+			<div style="padding: 0.5em; float: left;display: block;width: 22em;">
+				<span style="font-size: 5.5em; color: black; float: left;">
+					Stress
+				</span>
+				<span style="font-size: 5.5em; color: red;  float: left;">
+					Map
+				</span>
+			</div>
+			<div style="padding: 0.5em;float: left;display: block;width: 22em;">
+				<input id = 'threshold' type="range" min="-0.99" max="0" value='-0.2' name="threshold"  step="0.01"/>
+				<span id="thresholdPercentage">20</span>% Threshold Loss
+			</div>	
+			
+			<br />
+			<br />
+			<br />
+			<br />
+			<div style="padding: 0.5em;float: left;display: block;width: 22em;">
+				<!--Update as graphs are updated.  Total is number of permuations...-->
+				<span><span id="percentageComplete">0</span>% Complete</span>
+			</div>
+			
+			<br />
+			<br />
+			<br />
+			<br />
+			
+			<div style="padding: 0.5em;display: block;width: 22em;">
+				Upload Portfolio
+				<input type="file" id="portfolioFileInput">	
+			</div>
+			<div style="padding: 0.5em;display: block;width: 22em;">
+				Historical Scenarios
+				<input type="file" id="historicalStressFileInput">
+			</div>
+		
+			<br />
+			<br />
+		
+			<div id = "sortable2">
+			
+			</div>
+			
+			<br />
+			<br />
+			
+			
+			<!--Gets deleted with graph wiping SVG tags-->
+			<svg height="6em"  width="16em">
+				<g transform="translate(2,2)">
+					<rect width="20" height="20" rx="1" ry="1"  class='legend' style="fill: white; stroke-opacity: 1"></rect>
+				</g>
+				<text transform="translate(32,15)">Threshold Breached</text>
+				<g transform="translate(2,32)">
+					<rect width="20" height="20" rx="1" ry="1" style="fill: white; color: black; stroke-opacity: 1"></rect>
+				</g>
+				<text transform="translate(32,45)">Stress Scenario Passed</text>
+				<g transform="translate(2,62)">
+					<circle cx="10" cy="10" r="10"></circle>
+				</g>
+				<text transform="translate(32,75)">Historical Stress Scenario</text>
+			</svg>
+		</div>
+	
+		<div id="graphs"  style="float: left; display: inline-block;width: 40em;"></div>
+	</div>
+	
+	<script>
+	//array of shocks
+	defaultStressScenarioFile 	= "test_data/historical_stress_scenarios.csv";
+	defaultPortfolioFile		= "test_data/long_call.csv";
+	threshold 			= -0.20;
+	
+	var s = new StressMap(defaultStressScenarioFile, defaultPortfolioFile, threshold);
+	
+	s.init();
+	
+	//Changes UI, no need to grab more data
+	//change threshold, remove current rectangles, run through PLs again
+	d3.select("#threshold").on("input", function() {
+		s.setThreshold(+this.value);
+		});
+		
+	d3.select("#portfolioFileInput").on("change", function(){
+		if (window.File && window.FileReader && window.FileList && window.Blob) {
+			var uploadFile = this.files[0];
+			var reader = new window.FileReader();
+		
+			reader.onload = function(){
+				d3.select("#sortable2").selectAll("div.riskFactor").remove();
+				d3.selectAll("svg").remove();
+				d3	.select("#percentageComplete")
+					//pls calc'ed so far  / total number of pls to be calced * number of positions
+					.text(0);
+				s.init();
+				};
+			reader.readAsText(uploadFile);
+			}
+		else {
+			alert("Your browser won't let you save this graph -- try upgrading your browser to IE 10+ or Chrome or Firefox.");
+			}
+		});
+		
+	d3.select("#portfolioFileInput").on("change", function(){
+		s.setPortfolio(this.files[0]);
+		});
+		
+	d3.select("#historicalStressFileInput").on("change", function(){
+		s.setHistoricalStress(this.files[0]);
+		});
+		
+	
+	
+    	$( "#sortable2" ).sortable({
+		update: function(event, ui) {
+			s.setFactorOrder();
+		}
+	});
+	</script>
+</body>	
+</html>
